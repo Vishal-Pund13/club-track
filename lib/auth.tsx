@@ -261,7 +261,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const email = `${data.mobile.replace(/\s/g, "")}@clubtrack.app`;
     const initials = makeInitials(data.name);
 
-    const { error } = await supabase.auth.signUp({
+    // 1. Sign up the user in Supabase Auth
+    const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password: data.password,
       options: {
@@ -276,12 +277,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
     });
 
-    if (error) {
-      if (error.message.includes("already registered")) {
+    if (authError) {
+      if (authError.message.includes("already registered")) {
         return { ok: false, error: "Mobile number already registered. Please login." };
       }
-      return { ok: false, error: error.message };
+      return { ok: false, error: authError.message };
     }
+
+    if (!authData.user) return { ok: false, error: "Authentication failed. No user created." };
+
+    // 2. Manual Profile Creation (Insurance against trigger delay)
+    // We use .upsert so it doesn't crash if the trigger already did it.
+    const { error: profileError } = await supabase.from("profiles").upsert({
+      id: authData.user.id,
+      name: data.name,
+      initials,
+      mobile: data.mobile,
+      city: data.city,
+      aspirant_type: data.aspirantType,
+      role: "aspirant",
+    });
+
+    if (profileError) {
+      console.error("Profile creation error:", profileError);
+      // We don't block here because the trigger might eventually succeed
+    }
+
+    // 3. Force load the profile into state
+    await loadProfileAndTodos(authData.user.id);
+    
     return { ok: true };
   };
 
