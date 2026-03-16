@@ -258,6 +258,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { ok: true };
     }
 
+    console.log("Starting enlistment for:", data.mobile);
     const email = `${data.mobile.replace(/\s/g, "")}@clubtrack.app`;
     const initials = makeInitials(data.name);
 
@@ -278,16 +279,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     if (authError) {
+      console.error("Auth Signup Error:", authError);
       if (authError.message.includes("already registered")) {
         return { ok: false, error: "Mobile number already registered. Please login." };
       }
       return { ok: false, error: authError.message };
     }
 
-    if (!authData.user) return { ok: false, error: "Authentication failed. No user created." };
+    if (!authData.user) return { ok: false, error: "Enlistment failed. Please try again." };
+    console.log("Auth user created:", authData.user.id);
 
-    // 2. Manual Profile Creation (Insurance against trigger delay)
-    // We use .upsert so it doesn't crash if the trigger already did it.
+    // 2. Ensure session is active
+    let session = authData.session;
+    if (!session) {
+      console.log("No session found, forcing sign in...");
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password: data.password,
+      });
+      if (signInError) {
+        console.error("Forced Sign-In Error:", signInError);
+        return { ok: false, error: "Login failed after enlistment. Please report for duty manually." };
+      }
+      session = signInData.session;
+    }
+    console.log("Session established.");
+
+    // 3. Manual Profile Creation
     const { error: profileError } = await supabase.from("profiles").upsert({
       id: authData.user.id,
       name: data.name,
@@ -299,12 +317,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     if (profileError) {
-      console.error("Profile creation error:", profileError);
-      // We don't block here because the trigger might eventually succeed
+      console.warn("Manual Profile creation warning (Trigger might have handled it):", profileError);
+    } else {
+      console.log("Profile row created/verified.");
     }
 
-    // 3. Force load the profile into state
+    // 4. Force load the profile into state
     await loadProfileAndTodos(authData.user.id);
+    console.log("Local state updated. Redirecting to Ops...");
     
     return { ok: true };
   };
