@@ -1,12 +1,29 @@
 -- ═══════════════════════════════════════════════════════════════════
--- ClubTrack — Production Schema
--- Run this in Supabase SQL Editor (Dashboard → SQL Editor → New Query)
+-- ClubTrack — FULL NUCLEAR RESET & PRODUCTION SCHEMA
+-- Run this in Supabase SQL Editor to perform a 100% clean factory reset.
 -- ═══════════════════════════════════════════════════════════════════
+
+-- ─── 0. WIPE ALL EXISTING DATA ─────────────────────────────────────
+-- This removes all old tables, ghosts, and broken data schemas.
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+DROP FUNCTION IF EXISTS public.handle_new_user CASCADE;
+DROP FUNCTION IF EXISTS public.is_admin CASCADE;
+DROP VIEW IF EXISTS public.completions CASCADE;
+
+DROP TABLE IF EXISTS public.task_verifications CASCADE;
+DROP TABLE IF EXISTS public.tasks CASCADE;
+DROP TABLE IF EXISTS public.captain_assignments CASCADE;
+DROP TABLE IF EXISTS public.personal_todos CASCADE;
+DROP TABLE IF EXISTS public.profiles CASCADE;
+DROP TABLE IF EXISTS public.clubs CASCADE;
+
+-- Delete all existing test accounts/users to start fresh
+DELETE FROM auth.users;
 
 -- ─── Enable UUID extension ──────────────────────────────────────────
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ─── CLUBS ──────────────────────────────────────────────────────────
+-- ─── 1. CLUBS ──────────────────────────────────────────────────────────
 CREATE TABLE public.clubs (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
@@ -15,8 +32,7 @@ CREATE TABLE public.clubs (
   color TEXT NOT NULL
 );
 
--- ─── PROFILES (extends Supabase auth.users) ─────────────────────────
--- Stores aspirant data synced from auth + manual fields
+-- ─── 2. PROFILES (extends Supabase auth.users) ─────────────────────────
 CREATE TABLE public.profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
@@ -24,15 +40,14 @@ CREATE TABLE public.profiles (
   mobile TEXT UNIQUE,
   city TEXT,
   ssb_board TEXT,
-  aspirant_type TEXT DEFAULT 'NDA',  -- NDA, CDS, TGC, SSC Tech, etc.
-  role TEXT NOT NULL DEFAULT 'aspirant', -- 'aspirant' | 'admin'
+  aspirant_type TEXT DEFAULT 'NDA',  
+  role TEXT NOT NULL DEFAULT 'aspirant', 
   streak INTEGER NOT NULL DEFAULT 0,
-  last_active_date TEXT,             -- ISO date "YYYY-MM-DD"; used to compute streak
+  last_active_date TEXT,             
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- ─── CAPTAIN ASSIGNMENTS ────────────────────────────────────────────
--- Each club can have one captain (a profile).
+-- ─── 3. CAPTAIN ASSIGNMENTS ────────────────────────────────────────────
 CREATE TABLE public.captain_assignments (
   club_id TEXT NOT NULL REFERENCES public.clubs(id) ON DELETE CASCADE,
   profile_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
@@ -40,38 +55,34 @@ CREATE TABLE public.captain_assignments (
   PRIMARY KEY (club_id, profile_id)
 );
 
--- ─── TASKS ──────────────────────────────────────────────────────────
+-- ─── 4. TASKS ──────────────────────────────────────────────────────────
 CREATE TABLE public.tasks (
   id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
   club_id TEXT NOT NULL REFERENCES public.clubs(id) ON DELETE CASCADE,
   title TEXT NOT NULL,
   description TEXT NOT NULL DEFAULT '',
   pts INTEGER NOT NULL DEFAULT 10,
-  date TEXT NOT NULL,               -- "YYYY-MM-DD"
+  date TEXT NOT NULL,               
   active BOOLEAN NOT NULL DEFAULT TRUE,
-  requires_proof BOOLEAN NOT NULL DEFAULT TRUE, -- If true, aspirant must submit proof
+  requires_proof BOOLEAN NOT NULL DEFAULT TRUE, 
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- ─── TASK VERIFICATIONS (Anti-Fraud Core) ───────────────────────────
--- Every task completion goes through this pipeline:
---   submitted (pending) → approved (points credited) or rejected
---
--- Status: 'pending' | 'approved' | 'rejected'
+-- ─── 5. TASK VERIFICATIONS ───────────────────────────
 CREATE TABLE public.task_verifications (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   task_id TEXT NOT NULL REFERENCES public.tasks(id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-  proof_text TEXT,                   -- Description / activity link submitted by aspirant
+  proof_text TEXT,                   
   status TEXT NOT NULL DEFAULT 'pending',
   reviewed_by UUID REFERENCES public.profiles(id),
   reviewed_at TIMESTAMPTZ,
-  review_note TEXT,                  -- Captain can leave a note (e.g. "Video link invalid")
+  review_note TEXT,                  
   submitted_at TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE (task_id, user_id)          -- One submission per task per user
+  UNIQUE (task_id, user_id)          
 );
 
--- ─── PERSONAL TODOS (not scored) ────────────────────────────────────
+-- ─── 6. PERSONAL TODOS ────────────────────────────────────
 CREATE TABLE public.personal_todos (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
@@ -79,6 +90,13 @@ CREATE TABLE public.personal_todos (
   done BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- ════════════════════════════════════════════════════════════════════
+-- REAL-TIME SUBSCRIPTIONS
+-- ════════════════════════════════════════════════════════════════════
+-- This is critical for auto-syncing across devices.
+DROP PUBLICATION IF EXISTS supabase_realtime;
+CREATE PUBLICATION supabase_realtime FOR TABLE public.tasks, public.task_verifications, public.profiles, public.clubs;
 
 -- ════════════════════════════════════════════════════════════════════
 -- SEED DATA
@@ -102,8 +120,6 @@ ALTER TABLE public.tasks                ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.task_verifications   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.personal_todos       ENABLE ROW LEVEL SECURITY;
 
--- 1. Create a SECURITY DEFINER function to check admin status without recursion
--- This function runs with the privileges of the creator (postgres) and bypasses RLS
 CREATE OR REPLACE FUNCTION public.is_admin()
 RETURNS boolean AS $$
 BEGIN
@@ -114,20 +130,20 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- ── Clubs: everyone reads; admins write ─────────────────────────────
+-- Clubs
 CREATE POLICY "clubs_read_all"    ON public.clubs FOR SELECT USING (true);
 CREATE POLICY "clubs_admin_all"   ON public.clubs FOR ALL USING (public.is_admin());
 
--- ── Profiles: anyone can read; owner updates their own; admins manage all ────
+-- Profiles
 CREATE POLICY "profiles_read_all"   ON public.profiles FOR SELECT USING (true);
 CREATE POLICY "profiles_owner_all"  ON public.profiles FOR ALL USING (auth.uid() = id);
 CREATE POLICY "profiles_admin_all"  ON public.profiles FOR ALL USING (public.is_admin());
 
--- ── Captain assignments: anyone reads, admin writes ──────────────────
+-- Captain assignments
 CREATE POLICY "captain_read_all"   ON public.captain_assignments FOR SELECT USING (true);
 CREATE POLICY "captain_admin_all"  ON public.captain_assignments FOR ALL USING (public.is_admin());
 
--- ── Tasks: all read; admin + captains write ──────────────────────────
+-- Tasks
 CREATE POLICY "tasks_read_all"     ON public.tasks FOR SELECT USING (true);
 CREATE POLICY "tasks_write_access" ON public.tasks FOR ALL
   USING (
@@ -139,7 +155,7 @@ CREATE POLICY "tasks_write_access" ON public.tasks FOR ALL
     )
   );
 
--- ── Task Verifications ───────────────────────────────────────────────
+-- Verifications
 CREATE POLICY "verif_read_all" ON public.task_verifications FOR SELECT
   USING (
     user_id = auth.uid()
@@ -162,24 +178,14 @@ CREATE POLICY "verif_update_access" ON public.task_verifications FOR UPDATE
     )
   );
 
--- ── Personal todos: owner only ───────────────────────────────────────
+-- Todos
 CREATE POLICY "todos_own"  ON public.personal_todos FOR ALL
   USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
 
 -- ════════════════════════════════════════════════════════════════════
--- HELPER FUNCTIONS
+-- HELPER FUNCTIONS & TRIGGERS
 -- ════════════════════════════════════════════════════════════════════
 
--- Reads approved verifications as a "completions" view
-CREATE OR REPLACE VIEW public.completions AS
-  SELECT
-    user_id,
-    task_id,
-    submitted_at AS completed_at
-  FROM public.task_verifications
-  WHERE status = 'approved';
-
--- Function: auto-create profile after sign-up
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -195,27 +201,49 @@ BEGIN
     NEW.raw_user_meta_data->>'city',
     COALESCE(NEW.raw_user_meta_data->>'aspirant_type', 'NDA'),
     COALESCE(NEW.raw_user_meta_data->>'role', 'aspirant')
-  );
+  ) ON CONFLICT (id) DO NOTHING;
   RETURN NEW;
 END;
 $$;
 
--- Trigger: fires on every new auth.users row
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
 
+ALTER TABLE public.profiles DROP CONSTRAINT IF EXISTS profiles_mobile_key CASCADE;
+ALTER TABLE public.profiles ADD CONSTRAINT profiles_mobile_key UNIQUE (mobile);
+
 -- ════════════════════════════════════════════════════════════════════
--- NOTES FOR PRODUCTION
+-- BUILT-IN COMMANDER (ADMIN) ACCOUNT
 -- ════════════════════════════════════════════════════════════════════
--- 1. In Supabase Dashboard > Auth > Settings, disable "Confirm email"
---    OR set up a custom SMTP if you want email verification.
--- 2. The first admin must be manually set:
---    UPDATE public.profiles SET role = 'admin' WHERE mobile = 'YOUR_MOBILE';
--- 3. Assign captains:
---    INSERT INTO public.captain_assignments (club_id, profile_id)
---    VALUES ('strava', 'UUID_OF_CAPTAIN');
--- 4. For analytics, a Supabase Edge Fn (or dashboard) can query:
---    - task_verifications grouped by club_id / date / aspirant_type
---    - profiles grouped by city / aspirant_type
--- ════════════════════════════════════════════════════════════════════
+-- This automatically creates an Admin account you can use immediately.
+DO $$
+DECLARE
+    admin_uid UUID := gen_random_uuid();
+BEGIN
+    INSERT INTO auth.users (id, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at, role, confirmation_token, last_sign_in_at)
+    VALUES (
+        admin_uid,
+        'hq@clubtrack.app', 
+        crypt('admin@ct2025', gen_salt('bf')), 
+        NOW(),
+        '{"provider":"email","providers":["email"]}',
+        '{"name":"Admin Commander","role":"admin"}',
+        NOW(),
+        NOW(),
+        'authenticated',
+        '',
+        NOW()
+    );
+
+    INSERT INTO public.profiles (id, name, initials, mobile, city, ssb_board, role)
+    VALUES (
+        admin_uid,
+        'Command Headquarters',
+        'HQ',
+        'hq',
+        'Headquarters',
+        'Command Center',
+        'admin'
+    );
+END $$;

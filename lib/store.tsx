@@ -242,8 +242,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
                 }
             }
         }
+
         loadData();
-        return () => { mounted = false; };
+
+        let channel: any;
+        if (isSupabaseConfigured && supabase) {
+            channel = supabase
+                .channel("schema-db-changes")
+                .on("postgres_changes", { event: "*", schema: "public" }, () => {
+                    console.log("[Sync] Supabase data changed. Refetching...");
+                    if (mounted) loadData();
+                })
+                .subscribe();
+        }
+
+        return () => {
+            mounted = false;
+            if (channel && supabase) supabase.removeChannel(channel);
+        };
     }, []);
 
     // ── Submit completion with proof ─────────────────────────────────────────────

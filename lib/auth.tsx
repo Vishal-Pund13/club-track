@@ -353,16 +353,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     setLoading(true);
     try {
-      // 2. Forced Profile Sync (Now safe because RLS is fixed)
-      await supabase!.from("profiles").upsert({
-        id: authData.user.id,
-        name: data.name,
-        initials,
-        mobile: data.mobile,
-        city: data.city,
-        aspirant_type: data.aspirantType,
-        role: "aspirant",
-      });
+      // 2. Load Profile (Fallback metadata will cover us if DB trigger is slow)
       await loadProfileAndTodos(authData.user.id);
     } catch (e) {
       console.warn("Profile sync warning:", e);
