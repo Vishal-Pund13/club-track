@@ -24,14 +24,20 @@ export default function ClientRoot({ children }: { children: React.ReactNode }) 
 
     // Auth guard — redirect unauthenticated non-guests away from protected routes
     useEffect(() => {
+        const isPublic = PUBLIC_PATHS.includes(pathname);
+        console.log(`[Gate] Path: ${pathname}, User: ${user?.name || "None"}, Loading: ${loading}, isGuest: ${isGuest}`);
+
         if (loading) return; // Command Center check: Wait for auth to initialize
 
-        const isPublic = PUBLIC_PATHS.includes(pathname);
         if (!isPublic && !user && !isGuest) {
+            console.log("[Gate] No credentials found. Pushing to home.");
             router.push("/");
+            return;
         }
+
         // Admin guard — non-admins trying to access /admin
-        if (pathname === "/admin" && user?.role !== "admin") {
+        if (pathname.startsWith("/admin") && user?.role !== "admin") {
+            console.log("[Gate] Admin restricted area. User role:", user?.role);
             router.push("/ops");
         }
     }, [pathname, user, isGuest, loading, router]);

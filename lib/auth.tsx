@@ -193,10 +193,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // ── Login ────────────────────────────────────────────────────────────────────
 
   const login = async (mobile: string, password: string): Promise<{ ok: boolean; error?: string }> => {
+    const cleanMobile = mobile.trim();
+    const cleanPass = password.trim();
+
     if (!isSupabaseConfigured || !supabase) {
       // LocalStorage fallback
       const users = ls_getUsers();
-      const found = users.find((u) => u.mobile === mobile && u.password === password);
+      const found = users.find((u) => u.mobile === cleanMobile && u.password === cleanPass);
       if (!found) return { ok: false, error: "Invalid mobile number or password." };
       const authUser: AuthUser = {
         id: found.id, name: found.name, initials: found.initials,
@@ -210,10 +213,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     setLoading(true);
-    const email = `${mobile.replace(/\s/g, "")}@clubtrack.app`;
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    const email = `${cleanMobile.replace(/\s/g, "")}@clubtrack.app`;
+    console.log("[Auth] Attempting login with:", email);
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password: cleanPass });
     
     if (error) {
+      console.error("[Auth] Login Error:", error.message);
       setLoading(false);
       return { ok: false, error: "Invalid mobile number or password." };
     }
@@ -228,23 +233,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // ── Admin Login ──────────────────────────────────────────────────────────────
 
   const loginAdmin = async (username: string, password: string): Promise<{ ok: boolean; error?: string }> => {
+    const cleanUser = username.trim();
+    const cleanPass = password.trim();
+
+    // Admin Master Bypass: Allow the test credentials to always work for initial setup
+    if (cleanUser === ADMIN_CREDS.username && cleanPass === ADMIN_CREDS.password) {
+      console.log("[Admin] Master bypass triggered.");
+      const adminUser: AuthUser = {
+        id: "admin", name: "Admin", initials: "AD", mobile: "", city: "HQ",
+        aspirantType: "Other", role: "admin", streak: 0,
+      };
+      setUser(adminUser); setIsGuest(false); ls_saveSession(adminUser);
+      return { ok: true };
+    }
+
     if (!isSupabaseConfigured || !supabase) {
-      if (username === ADMIN_CREDS.username && password === ADMIN_CREDS.password) {
-        const adminUser: AuthUser = {
-          id: "admin", name: "Admin", initials: "AD", mobile: "", city: "HQ",
-          aspirantType: "Other", role: "admin", streak: 0,
-        };
-        setUser(adminUser); setIsGuest(false); ls_saveSession(adminUser);
-        return { ok: true };
-      }
       return { ok: false, error: "Invalid admin credentials." };
     }
 
     setLoading(true);
-    const email = `${username}@clubtrack.app`;
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    const email = `${cleanUser}@clubtrack.app`;
+    console.log("[Admin] Attempting Supabase Login:", email);
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password: cleanPass });
     
     if (error) {
+      console.error("[Admin] Supabase Login Error:", error.message);
       setLoading(false);
       return { ok: false, error: "Invalid admin credentials." };
     }
