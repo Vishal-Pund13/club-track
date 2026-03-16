@@ -30,6 +30,13 @@ export default function ClientRoot({ children }: { children: React.ReactNode }) 
         if (loading) return; // Command Center check: Wait for auth to initialize
 
         if (!isPublic && !user && !isGuest) {
+            // Tactical Last Resort: Check if session is in localStorage to prevent flickering logout
+            const session = localStorage.getItem("ct_session");
+            if (session) {
+                console.log("[Gate] State is null but session exists in storage. Holding gate.");
+                return;
+            }
+
             console.log("[Gate] No credentials found. Pushing to home.");
             router.push("/");
             return;

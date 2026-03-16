@@ -136,30 +136,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // ── Load session on mount ────────────────────────────────────────────────────
   useEffect(() => {
     async function init() {
-      if (!isSupabaseConfigured || !supabase) {
-        // LocalStorage fallback
-        const session = ls_getSession();
-        if (session) {
-          setUser(session);
+      // 1. Check local session first (Master bypass or previous login)
+      const localSession = ls_getSession();
+      if (localSession) {
+        setUser(localSession);
+        if (localSession.id !== "admin") {
           setPersonalTodos(ls_getTodos());
         }
+      }
+
+      if (!isSupabaseConfigured || !supabase) {
         setLoading(false);
         return;
       }
 
-      // Supabase: get current session
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        await loadProfileAndTodos(session.user.id);
+      // 2. Supabase: get current session (Overrides local if found)
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          await loadProfileAndTodos(session.user.id);
+        } else if (!localSession) {
+          setUser(null);
+        }
+      } catch (e) {
+        console.warn("Supabase auth init failed:", e);
       }
+      
       setLoading(false);
 
-      // Listen for auth changes
+      // 3. Listen for auth changes
       const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
         if (session?.user) {
           await loadProfileAndTodos(session.user.id);
         } else {
-          setUser(null);
+          // Only clear if we're not using the admin master bypass
+          setUser((curr) => {
+            if (curr?.id === "admin") return curr;
+            return null;
+          });
           setCaptainClubs([]);
           setPersonalTodos([]);
         }
@@ -179,6 +193,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (profile) {
       setUser(profileToAuthUser(profile as DBProfile));
       setIsGuest(false);
+    } else {
+      // 2. Fallback: If profile table is slow, use Auth metadata
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        console.warn("Profile table missing entry, using Auth metadata fallback.");
+        const meta = session.user.user_metadata;
+        const fallbackUser: AuthUser = {
+          id: session.user.id,
+          name: meta?.name || "Aspirant",
+          initials: meta?.initials || "XX",
+          mobile: meta?.mobile || "",
+          city: meta?.city || "",
+          aspirantType: meta?.aspirant_type || "Other",
+          role: meta?.role || "aspirant",
+          streak: 0,
+        };
+        setUser(fallbackUser);
+        setIsGuest(false);
+      }
     }
     if (todos) {
       setPersonalTodos(todos.map((t: { id: string; title: string; done: boolean; created_at: string }) => ({
