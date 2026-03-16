@@ -318,10 +318,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     // ── Add task ─────────────────────────────────────────────────────────────────
     const addTaskRealtime = async (taskData: Omit<Task, "id"> & { id?: string }) => {
-        const newTask: Task = { ...taskData, id: taskData.id ?? `task_${Date.now()}` };
-        dispatch({ type: "ADD_TASK", task: newTask });
+        // If not passing an ID, we just let Supabase generate it and it will come down via realtime update
         if (isSupabaseConfigured && supabase) {
-            await supabase.from("tasks").insert(newTask);
+            const { data, error } = await supabase.from("tasks").insert({
+                title: taskData.title,
+                club_id: taskData.club_id,
+                description: taskData.description,
+                pts: taskData.pts,
+                date: taskData.date,
+                active: taskData.active,
+                requires_proof: taskData.requires_proof
+            }).select().single();
+            
+            if (error) {
+                console.error("[Deploy] Mission deployment failed:", error.message, error.details);
+            } else if (data) {
+                dispatch({ type: "ADD_TASK", task: data });
+            }
+        } else {
+            const newTask: Task = { ...taskData, id: taskData.id ?? `task_${Date.now()}` };
+            dispatch({ type: "ADD_TASK", task: newTask });
         }
     };
 

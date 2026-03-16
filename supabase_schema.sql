@@ -225,7 +225,7 @@ BEGIN
     INSERT INTO auth.users (id, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at, role, confirmation_token, last_sign_in_at)
     VALUES (
         admin_uid,
-        'hq@clubtrack.app', 
+        'admin@clubtrack.app', 
         crypt('admin@ct2025', gen_salt('bf')), 
         NOW(),
         '{"provider":"email","providers":["email"]}',
@@ -242,7 +242,7 @@ BEGIN
         admin_uid,
         'Command Headquarters',
         'HQ',
-        'hq',
+        'admin',
         'Headquarters',
         'Command Center',
         'admin'

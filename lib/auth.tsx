@@ -272,9 +272,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const cleanUser = username.trim();
     const cleanPass = password.trim();
 
-    // Admin Master Bypass: Allow the test credentials to always work for initial setup
-    if (cleanUser === ADMIN_CREDS.username && cleanPass === ADMIN_CREDS.password) {
-      console.log("[Admin] Master bypass triggered.");
+    // Admin Master Bypass: Allow the test credentials to ALWAYS work for initial setup natively
+    // if using Supabase, we MUST route it through the real database login for RLS to work.
+    if (!isSupabaseConfigured && cleanUser === ADMIN_CREDS.username && cleanPass === ADMIN_CREDS.password) {
+      console.log("[Admin] Local Master Bypass triggered (No DB connected).");
       const adminUser: AuthUser = {
         id: "admin", name: "Admin", initials: "AD", mobile: "", city: "HQ",
         aspirantType: "Other", role: "admin", streak: 0,
