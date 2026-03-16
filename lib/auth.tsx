@@ -209,10 +209,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { ok: true };
     }
 
-    // Supabase: use mobile as email surrogate → mobile@clubtrack.app
+    console.log("Attempting tactical login for:", mobile);
     const email = `${mobile.replace(/\s/g, "")}@clubtrack.app`;
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) return { ok: false, error: "Invalid mobile number or password." };
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    
+    if (error) {
+      console.error("Login Error:", error.message);
+      return { ok: false, error: "Invalid mobile number or password." };
+    }
+
+    if (data.user) {
+      console.log("Auth verified, loading profile...");
+      await loadProfileAndTodos(data.user.id);
+      console.log("Profile sync complete.");
+    }
+
     return { ok: true };
   };
 
@@ -231,10 +242,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { ok: false, error: "Invalid admin credentials." };
     }
 
-    // In production: admin logs in with email/password (admin@clubtrack.app)
+    console.log("Admin requesting armory access...");
     const email = `${username}@clubtrack.app`;
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) return { ok: false, error: "Invalid admin credentials." };
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    
+    if (error) {
+      console.error("Admin Login Error:", error.message);
+      return { ok: false, error: "Invalid admin credentials." };
+    }
+
+    if (data.user) {
+      await loadProfileAndTodos(data.user.id);
+      console.log("Admin profile synced.");
+    }
+    
     return { ok: true };
   };
 
