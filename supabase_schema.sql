@@ -246,5 +246,5 @@ BEGIN
         'Headquarters',
         'Command Center',
         'admin'
-    );
+    ) ON CONFLICT (id) DO UPDATE SET role = 'admin';
 END $$;
