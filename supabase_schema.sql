@@ -103,11 +103,12 @@ CREATE PUBLICATION supabase_realtime FOR TABLE public.tasks, public.task_verific
 -- ════════════════════════════════════════════════════════════════════
 
 INSERT INTO public.clubs (id, name, icon, description, color) VALUES
-  ('strava',    'Strava Squad',       '🏃',  'Physical fitness and outdoor activities',  '#EF9F27'),
-  ('newspaper', 'Newspaper Squad',    '📰',  'Current affairs and editorial skills',     '#BA7517'),
-  ('heroes',    'Heroes of Army',     '🎖️', 'Military history and valor stories',       '#EF9F27'),
-  ('psych',     'Psych Squad',        '🧠',  'Psychology and mental resilience',         '#BA7517'),
-  ('comm',      'Communication Squad','💬',  'Public speaking and leadership',           '#EF9F27');
+  ('strava', 'Strava Squad', '🏃', 'Physical fitness and outdoor activities', '#EF9F27'),
+  ('newspaper', 'Newspaper Squad', '📰', 'Current affairs and editorial skills', '#BA7517'),
+  ('heroes', 'Heroes of Army', '🎖️', 'Military history and valor stories', '#EF9F27'),
+  ('psych', 'Psych Squad', '🧠', 'Psychology and mental resilience', '#BA7517'),
+  ('comm', 'Communication Squad', 'CS', 'Public speaking and leadership', '#EF9F27')
+ON CONFLICT (id) DO NOTHING;
 
 -- ════════════════════════════════════════════════════════════════════
 -- ROW LEVEL SECURITY
