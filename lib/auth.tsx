@@ -191,8 +191,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       supabase.from("captain_assignments").select("club_id").eq("profile_id", userId),
     ]);
     if (profile) {
-      setUser(profileToAuthUser(profile as DBProfile));
+      const authUser = profileToAuthUser(profile as DBProfile);
+      setUser(authUser);
       setIsGuest(false);
+      ls_saveSession(authUser); // Crucial: sync database role to local cache
     } else {
       // 2. Fallback: If profile table is slow, use Auth metadata
       const { data: { session } } = await supabase.auth.getSession();
@@ -211,6 +213,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         };
         setUser(fallbackUser);
         setIsGuest(false);
+        ls_saveSession(fallbackUser);
       }
     }
     if (todos) {
