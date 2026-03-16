@@ -102,38 +102,36 @@ ALTER TABLE public.tasks                ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.task_verifications   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.personal_todos       ENABLE ROW LEVEL SECURITY;
 
--- ── Clubs: everyone reads ────────────────────────────────────────────
-CREATE POLICY "clubs_read_all"    ON public.clubs FOR SELECT USING (true);
-CREATE POLICY "clubs_admin_write" ON public.clubs FOR ALL
-  USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin'))
-  WITH CHECK (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin'));
+-- 1. Create a SECURITY DEFINER function to check admin status without recursion
+-- This function runs with the privileges of the creator (postgres) and bypasses RLS
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS boolean AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE id = auth.uid() AND role = 'admin'
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- ── Profiles: anyone can read; owner updates their own ───────────────
-CREATE POLICY "profiles_read_all"  ON public.profiles FOR SELECT USING (true);
-CREATE POLICY "profiles_insert_own" ON public.profiles FOR INSERT WITH CHECK (auth.uid() = id);
-CREATE POLICY "profiles_update_own" ON public.profiles FOR UPDATE USING (auth.uid() = id);
-CREATE POLICY "profiles_admin_all"  ON public.profiles FOR ALL
-  USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin'));
+-- ── Clubs: everyone reads; admins write ─────────────────────────────
+CREATE POLICY "clubs_read_all"    ON public.clubs FOR SELECT USING (true);
+CREATE POLICY "clubs_admin_all"   ON public.clubs FOR ALL USING (public.is_admin());
+
+-- ── Profiles: anyone can read; owner updates their own; admins manage all ────
+CREATE POLICY "profiles_read_all"   ON public.profiles FOR SELECT USING (true);
+CREATE POLICY "profiles_owner_all"  ON public.profiles FOR ALL USING (auth.uid() = id);
+CREATE POLICY "profiles_admin_all"  ON public.profiles FOR ALL USING (public.is_admin());
 
 -- ── Captain assignments: anyone reads, admin writes ──────────────────
 CREATE POLICY "captain_read_all"   ON public.captain_assignments FOR SELECT USING (true);
-CREATE POLICY "captain_admin_write" ON public.captain_assignments FOR ALL
-  USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin'))
-  WITH CHECK (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin'));
+CREATE POLICY "captain_admin_all"  ON public.captain_assignments FOR ALL USING (public.is_admin());
 
 -- ── Tasks: all read; admin + captains write ──────────────────────────
 CREATE POLICY "tasks_read_all"     ON public.tasks FOR SELECT USING (true);
-CREATE POLICY "tasks_admin_write"  ON public.tasks FOR ALL
+CREATE POLICY "tasks_write_access" ON public.tasks FOR ALL
   USING (
-    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
-    OR
-    EXISTS (
-      SELECT 1 FROM public.captain_assignments ca
-      WHERE ca.club_id = tasks.club_id AND ca.profile_id = auth.uid()
-    )
-  )
-  WITH CHECK (
-    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
+    public.is_admin()
     OR
     EXISTS (
       SELECT 1 FROM public.captain_assignments ca
@@ -142,22 +140,21 @@ CREATE POLICY "tasks_admin_write"  ON public.tasks FOR ALL
   );
 
 -- ── Task Verifications ───────────────────────────────────────────────
--- Aspirants insert their own; captains/admins can read all + update status
-CREATE POLICY "verif_read_own"    ON public.task_verifications FOR SELECT
+CREATE POLICY "verif_read_all" ON public.task_verifications FOR SELECT
   USING (
     user_id = auth.uid()
-    OR EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
+    OR public.is_admin()
     OR EXISTS (
       SELECT 1 FROM public.captain_assignments ca
       JOIN public.tasks t ON t.id = task_verifications.task_id
       WHERE ca.club_id = t.club_id AND ca.profile_id = auth.uid()
     )
   );
-CREATE POLICY "verif_insert_own"  ON public.task_verifications FOR INSERT
+CREATE POLICY "verif_insert_own" ON public.task_verifications FOR INSERT
   WITH CHECK (user_id = auth.uid());
-CREATE POLICY "verif_update_captain" ON public.task_verifications FOR UPDATE
+CREATE POLICY "verif_update_access" ON public.task_verifications FOR UPDATE
   USING (
-    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
+    public.is_admin()
     OR EXISTS (
       SELECT 1 FROM public.captain_assignments ca
       JOIN public.tasks t ON t.id = task_verifications.task_id
