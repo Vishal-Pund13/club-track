@@ -209,20 +209,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { ok: true };
     }
 
-    console.log("Attempting tactical login for:", mobile);
+    setLoading(true);
     const email = `${mobile.replace(/\s/g, "")}@clubtrack.app`;
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     
     if (error) {
-      console.error("Login Error:", error.message);
+      setLoading(false);
       return { ok: false, error: "Invalid mobile number or password." };
     }
 
-    // Background sync
     if (data.user) {
-      setTimeout(() => loadProfileAndTodos(data.user!.id).catch(() => {}), 10);
+      await loadProfileAndTodos(data.user.id);
     }
-
+    setLoading(false);
     return { ok: true };
   };
 
@@ -241,20 +240,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { ok: false, error: "Invalid admin credentials." };
     }
 
-    console.log("Admin requesting armory access...");
+    setLoading(true);
     const email = `${username}@clubtrack.app`;
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     
     if (error) {
-      console.error("Admin Login Error:", error.message);
+      setLoading(false);
       return { ok: false, error: "Invalid admin credentials." };
     }
 
-    // Background sync
     if (data.user) {
-      setTimeout(() => loadProfileAndTodos(data.user!.id).catch(() => {}), 10);
+      await loadProfileAndTodos(data.user.id);
     }
-    
+    setLoading(false);
     return { ok: true };
   };
 
@@ -299,38 +297,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     if (authError) {
-      console.error("Auth Signup Error:", authError);
       return { ok: false, error: authError.message };
     }
 
     if (!authData.user) return { ok: false, error: "Enlistment failed. No user ID returned." };
 
-    // 2. Immediate Session Check
-    let session = authData.session;
-    if (!session) {
-      // Background attempt to sign in if signUp didn't auto-login
-      const { data: signInData } = await supabase.auth.signInWithPassword({ email, password: data.password });
-      if (signInData) session = signInData.session;
+    setLoading(true);
+    try {
+      // 2. Forced Profile Sync (Now safe because RLS is fixed)
+      await supabase!.from("profiles").upsert({
+        id: authData.user.id,
+        name: data.name,
+        initials,
+        mobile: data.mobile,
+        city: data.city,
+        aspirant_type: data.aspirantType,
+        role: "aspirant",
+      });
+      await loadProfileAndTodos(authData.user.id);
+    } catch (e) {
+      console.warn("Profile sync warning:", e);
     }
-
-    // 3. Final Sync (Background/Non-blocking insurance)
-    // We do NOT heavily await this so the user isn't stuck
-    setTimeout(async () => {
-      try {
-        await supabase!.from("profiles").upsert({
-          id: authData.user!.id,
-          name: data.name,
-          initials,
-          mobile: data.mobile,
-          city: data.city,
-          aspirant_type: data.aspirantType,
-          role: "aspirant",
-        });
-        await loadProfileAndTodos(authData.user!.id);
-      } catch (e) {
-        console.warn("Background sync delay:", e);
-      }
-    }, 10);
+    setLoading(false);
 
     return { ok: true };
   };
