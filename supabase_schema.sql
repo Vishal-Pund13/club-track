@@ -1,6 +1,6 @@
 -- ═══════════════════════════════════════════════════════════════════
--- ClubTrack — FULL NUCLEAR RESET & PRODUCTION SCHEMA
--- Run this in Supabase SQL Editor to perform a 100% clean factory reset.
+-- ClubTrack — FULL FACTORY RESET & PRODUCTION SCHEMA
+-- Run this in Supabase SQL Editor to perform a 100% clean reset.
 -- ═══════════════════════════════════════════════════════════════════
 
 -- ─── 0. WIPE ALL EXISTING DATA ─────────────────────────────────────
@@ -17,7 +17,7 @@ DROP TABLE IF EXISTS public.personal_todos CASCADE;
 DROP TABLE IF EXISTS public.profiles CASCADE;
 DROP TABLE IF EXISTS public.clubs CASCADE;
 
--- Delete all existing test accounts/users to start fresh
+-- Delete all existing test accounts/users to start perfectly fresh
 DELETE FROM auth.users;
 
 -- ─── Enable UUID extension ──────────────────────────────────────────
@@ -92,9 +92,8 @@ CREATE TABLE public.personal_todos (
 );
 
 -- ════════════════════════════════════════════════════════════════════
--- REAL-TIME SUBSCRIPTIONS
+-- REAL-TIME SUBSCRIPTIONS (For instant syncing)
 -- ════════════════════════════════════════════════════════════════════
--- This is critical for auto-syncing across devices.
 DROP PUBLICATION IF EXISTS supabase_realtime;
 CREATE PUBLICATION supabase_realtime FOR TABLE public.tasks, public.task_verifications, public.profiles, public.clubs;
 
@@ -111,8 +110,11 @@ INSERT INTO public.clubs (id, name, icon, description, color) VALUES
 ON CONFLICT (id) DO NOTHING;
 
 -- ════════════════════════════════════════════════════════════════════
--- ROW LEVEL SECURITY
+-- ROW LEVEL SECURITY (Permissive Mode for Scaling)
 -- ════════════════════════════════════════════════════════════════════
+-- Everything is completely open to authenticated and anon users to 
+-- ensure you face zero syncing blockers while scaling up. You can restrict 
+-- these deeply once the core is functioning identically on all laptops/phones.
 
 ALTER TABLE public.clubs                ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.profiles             ENABLE ROW LEVEL SECURITY;
@@ -121,40 +123,12 @@ ALTER TABLE public.tasks                ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.task_verifications   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.personal_todos       ENABLE ROW LEVEL SECURITY;
 
-CREATE OR REPLACE FUNCTION public.is_admin()
-RETURNS boolean AS $$
-BEGIN
-  RETURN EXISTS (
-    SELECT 1 FROM public.profiles
-    WHERE id = auth.uid() AND role = 'admin'
-  );
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- Clubs
-CREATE POLICY "clubs_read_all"    ON public.clubs FOR SELECT USING (true);
-CREATE POLICY "clubs_admin_all"   ON public.clubs FOR ALL USING (true) WITH CHECK (true);
-
--- Profiles
-CREATE POLICY "profiles_read_all"   ON public.profiles FOR SELECT USING (true);
-CREATE POLICY "profiles_owner_all"  ON public.profiles FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "profiles_admin_all"  ON public.profiles FOR ALL USING (true) WITH CHECK (true);
-
--- Captain assignments
-CREATE POLICY "captain_read_all"   ON public.captain_assignments FOR SELECT USING (true);
-CREATE POLICY "captain_admin_all"  ON public.captain_assignments FOR ALL USING (true) WITH CHECK (true);
-
--- Tasks
-CREATE POLICY "tasks_read_all"     ON public.tasks FOR SELECT USING (true);
-CREATE POLICY "tasks_write_access" ON public.tasks FOR ALL USING (true) WITH CHECK (true);
-
--- Verifications
-CREATE POLICY "verif_read_all" ON public.task_verifications FOR SELECT USING (true);
-CREATE POLICY "verif_insert_own" ON public.task_verifications FOR INSERT WITH CHECK (true);
-CREATE POLICY "verif_update_access" ON public.task_verifications FOR UPDATE USING (true) WITH CHECK (true);
-
--- Todos
-CREATE POLICY "todos_own"  ON public.personal_todos FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "clubs_all" ON public.clubs FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "profiles_all" ON public.profiles FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "captain_all" ON public.captain_assignments FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "tasks_all" ON public.tasks FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "verif_all" ON public.task_verifications FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "todos_all" ON public.personal_todos FOR ALL USING (true) WITH CHECK (true);
 
 -- ════════════════════════════════════════════════════════════════════
 -- HELPER FUNCTIONS & TRIGGERS
@@ -184,40 +158,66 @@ CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
 
+-- Handle mobile unique conflicts gracefully
 ALTER TABLE public.profiles DROP CONSTRAINT IF EXISTS profiles_mobile_key CASCADE;
 ALTER TABLE public.profiles ADD CONSTRAINT profiles_mobile_key UNIQUE (mobile);
 
 -- ════════════════════════════════════════════════════════════════════
--- BUILT-IN COMMANDER (ADMIN) ACCOUNT
+-- BULLETPROOF COMMANDER (ADMIN) GENERATION
 -- ════════════════════════════════════════════════════════════════════
--- This automatically creates an Admin account you can use immediately.
 DO $$
 DECLARE
-    admin_uid UUID := gen_random_uuid();
+    admin_uid UUID;
 BEGIN
-    INSERT INTO auth.users (id, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at, role, confirmation_token, last_sign_in_at)
-    VALUES (
-        admin_uid,
-        'admin@clubtrack.app', 
-        crypt('admin@ct2025', gen_salt('bf')), 
-        NOW(),
-        '{"provider":"email","providers":["email"]}',
-        '{"name":"Admin Commander","role":"admin"}',
-        NOW(),
-        NOW(),
-        'authenticated',
-        '',
-        NOW()
-    );
+    -- Check if the admin email already exists in Auth
+    SELECT id INTO admin_uid FROM auth.users WHERE email = 'admin@clubtrack.app' LIMIT 1;
+    
+    IF admin_uid IS NOT NULL THEN
+        -- Safely overwrite the password to guarantee login works
+        UPDATE auth.users 
+        SET 
+            encrypted_password = crypt('admin@ct2025', gen_salt('bf')),
+            role = 'authenticated',
+            raw_user_meta_data = '{"name":"Admin Commander","role":"admin"}'
+        WHERE id = admin_uid;
+        
+        -- Safely ensure profile is set to admin
+        UPDATE public.profiles 
+        SET role = 'admin', mobile = 'admin'
+        WHERE id = admin_uid;
+    ELSE
+        -- Admin does not exist, create from absolute scratch
+        admin_uid := gen_random_uuid();
+        
+        INSERT INTO auth.users (
+            id, email, encrypted_password, email_confirmed_at, 
+            raw_app_meta_data, raw_user_meta_data, created_at, updated_at, 
+            role, confirmation_token, last_sign_in_at
+        ) VALUES (
+            admin_uid,
+            'admin@clubtrack.app', 
+            crypt('admin@ct2025', gen_salt('bf')), 
+            NOW(),
+            '{"provider":"email","providers":["email"]}',
+            '{"name":"Admin Commander","role":"admin"}',
+            NOW(),
+            NOW(),
+            'authenticated',
+            '',
+            NOW()
+        );
 
-    INSERT INTO public.profiles (id, name, initials, mobile, city, ssb_board, role)
-    VALUES (
-        admin_uid,
-        'Command Headquarters',
-        'HQ',
-        'admin',
-        'Headquarters',
-        'Command Center',
-        'admin'
-    ) ON CONFLICT (id) DO UPDATE SET role = 'admin';
+        -- Insert the profile manually (ON CONFLICT DO UPDATE handles if trigger fires first)
+        INSERT INTO public.profiles (id, name, initials, mobile, city, ssb_board, role)
+        VALUES (
+            admin_uid,
+            'Command Headquarters',
+            'HQ',
+            'admin',
+            'Headquarters',
+            'Command Center',
+            'admin'
+        ) ON CONFLICT (id) DO UPDATE 
+        SET role = 'admin', mobile = 'admin';
+    END IF;
 END $$;
