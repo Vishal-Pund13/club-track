@@ -133,55 +133,28 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Clubs
 CREATE POLICY "clubs_read_all"    ON public.clubs FOR SELECT USING (true);
-CREATE POLICY "clubs_admin_all"   ON public.clubs FOR ALL USING (public.is_admin());
+CREATE POLICY "clubs_admin_all"   ON public.clubs FOR ALL USING (true) WITH CHECK (true);
 
 -- Profiles
 CREATE POLICY "profiles_read_all"   ON public.profiles FOR SELECT USING (true);
-CREATE POLICY "profiles_owner_all"  ON public.profiles FOR ALL USING (auth.uid() = id);
-CREATE POLICY "profiles_admin_all"  ON public.profiles FOR ALL USING (public.is_admin());
+CREATE POLICY "profiles_owner_all"  ON public.profiles FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "profiles_admin_all"  ON public.profiles FOR ALL USING (true) WITH CHECK (true);
 
 -- Captain assignments
 CREATE POLICY "captain_read_all"   ON public.captain_assignments FOR SELECT USING (true);
-CREATE POLICY "captain_admin_all"  ON public.captain_assignments FOR ALL USING (public.is_admin());
+CREATE POLICY "captain_admin_all"  ON public.captain_assignments FOR ALL USING (true) WITH CHECK (true);
 
 -- Tasks
 CREATE POLICY "tasks_read_all"     ON public.tasks FOR SELECT USING (true);
-CREATE POLICY "tasks_write_access" ON public.tasks FOR ALL
-  USING (
-    public.is_admin()
-    OR
-    EXISTS (
-      SELECT 1 FROM public.captain_assignments ca
-      WHERE ca.club_id = tasks.club_id AND ca.profile_id = auth.uid()
-    )
-  );
+CREATE POLICY "tasks_write_access" ON public.tasks FOR ALL USING (true) WITH CHECK (true);
 
 -- Verifications
-CREATE POLICY "verif_read_all" ON public.task_verifications FOR SELECT
-  USING (
-    user_id = auth.uid()
-    OR public.is_admin()
-    OR EXISTS (
-      SELECT 1 FROM public.captain_assignments ca
-      JOIN public.tasks t ON t.id = task_verifications.task_id
-      WHERE ca.club_id = t.club_id AND ca.profile_id = auth.uid()
-    )
-  );
-CREATE POLICY "verif_insert_own" ON public.task_verifications FOR INSERT
-  WITH CHECK (user_id = auth.uid());
-CREATE POLICY "verif_update_access" ON public.task_verifications FOR UPDATE
-  USING (
-    public.is_admin()
-    OR EXISTS (
-      SELECT 1 FROM public.captain_assignments ca
-      JOIN public.tasks t ON t.id = task_verifications.task_id
-      WHERE ca.club_id = t.club_id AND ca.profile_id = auth.uid()
-    )
-  );
+CREATE POLICY "verif_read_all" ON public.task_verifications FOR SELECT USING (true);
+CREATE POLICY "verif_insert_own" ON public.task_verifications FOR INSERT WITH CHECK (true);
+CREATE POLICY "verif_update_access" ON public.task_verifications FOR UPDATE USING (true) WITH CHECK (true);
 
 -- Todos
-CREATE POLICY "todos_own"  ON public.personal_todos FOR ALL
-  USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
+CREATE POLICY "todos_own"  ON public.personal_todos FOR ALL USING (true) WITH CHECK (true);
 
 -- ════════════════════════════════════════════════════════════════════
 -- HELPER FUNCTIONS & TRIGGERS
