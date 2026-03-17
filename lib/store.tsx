@@ -313,7 +313,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         dispatch({ type: "UPDATE_VERIFICATION", id: verifId, status, reviewNote, reviewedBy: reviewerId });
 
         if (isSupabaseConfigured && supabase) {
-            await supabase
+            console.log(`[Sync] Updating verification ${verifId} to ${status}...`);
+            const { data, error } = await supabase
                 .from("task_verifications")
                 .update({
                     status,
@@ -321,7 +322,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
                     reviewed_by: reviewerId,
                     reviewed_at: new Date().toISOString(),
                 })
-                .eq("id", verifId);
+                .eq("id", verifId)
+                .select()
+                .single();
+
+            if (error) {
+                console.error("[Sync] Verification update failed:", error.message);
+            } else if (!data) {
+                console.warn("[Sync] Verification update applied to 0 rows. Likely a missing row or RLS block.");
+            } else {
+                console.log("[Sync] Verification DB update successful:", data.id);
+            }
         }
     };
 

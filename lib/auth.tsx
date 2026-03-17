@@ -136,8 +136,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // ── Load session on mount ────────────────────────────────────────────────────
   useEffect(() => {
     async function init() {
-      // 1. Check local session first (Master bypass or previous login)
-      const localSession = ls_getSession();
+      // 1. Check local session first
+      let localSession = ls_getSession();
+      
+      // CRITICAL FIX: If Supabase is ONLINE, aggressively destroy any fake offline "admin" 
+      // ghosts from localStorage. Otherwise, their user.id = "admin" instead of a UUID,
+      // which causes Supabase to brutally reject any updates like mission approvals!
+      if (isSupabaseConfigured && localSession?.id === "admin") {
+          console.warn("[Auth] Purging fake offline admin session because Supabase is active.");
+          ls_saveSession(null);
+          localSession = null;
+      }
+
       if (localSession) {
         setUser(localSession);
         if (localSession.id !== "admin") {
@@ -169,9 +179,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (session?.user) {
           await loadProfileAndTodos(session.user.id);
         } else {
-          // Only clear if we're not using the admin master bypass
+          // Only clear if we're not using the admin master bypass AND supabase is offline
           setUser((curr) => {
-            if (curr?.id === "admin") return curr;
+            if (!isSupabaseConfigured && curr?.id === "admin") return curr;
             return null;
           });
           setCaptainClubs([]);
