@@ -283,12 +283,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
             submitted_at: new Date().toISOString(),
         };
 
+        // Instantly update UI for snappy feel
         dispatch({ type: "SUBMIT_VERIFICATION", verification: optimisticVerif });
 
         if (isSupabaseConfigured && supabase) {
-            const { data } = await supabase
+            console.log(`[Sync] Inserting verification for task ${taskId}...`);
+            const { data, error } = await supabase
                 .from("task_verifications")
-                .upsert({
+                .insert({
                     task_id: taskId,
                     user_id: userId,
                     proof_text: proofText,
@@ -297,7 +299,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
                 .select()
                 .single();
 
-            if (data) {
+            if (error) {
+                console.error("[Sync] Verification insert failed:", error.message);
+            } else if (data) {
+                // Update the local fake ID with the real DB UUID
                 dispatch({ type: "SUBMIT_VERIFICATION", verification: { ...optimisticVerif, id: data.id } });
             }
         }
