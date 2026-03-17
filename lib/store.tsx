@@ -53,7 +53,8 @@ type Action =
     | { type: "UPDATE_VERIFICATION"; id: string; status: VerifStatus; reviewNote?: string; reviewedBy?: string }
     | { type: "TOGGLE_DARK_MODE" }
     | { type: "ADD_TASK"; task: Task }
-    | { type: "TOGGLE_TASK_ACTIVE"; taskId: string };
+    | { type: "TOGGLE_TASK_ACTIVE"; taskId: string }
+    | { type: "SET_USER_ID"; userId: string };
 
 // ─── Reducer ─────────────────────────────────────────────────────────────────
 
@@ -141,6 +142,9 @@ function reducer(state: AppState, action: Action): AppState {
             const updated = state.tasks.map(t => t.id === action.taskId ? { ...t, active: !t.active } : t);
             return { ...state, tasks: updated };
         }
+
+        case "SET_USER_ID":
+            return { ...state, currentUserId: action.userId };
 
         default:
             return state;

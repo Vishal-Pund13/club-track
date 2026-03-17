@@ -8,10 +8,17 @@ import { usePathname, useRouter } from "next/navigation";
 const PUBLIC_PATHS = ["/", "/login", "/enlist"];
 
 export default function ClientRoot({ children }: { children: React.ReactNode }) {
-    const { state } = useApp();
+    const { state, dispatch } = useApp();
     const { user, isGuest, loading } = useAuth();
     const pathname = usePathname();
     const router = useRouter();
+
+    // Sync Auth user up to the App store
+    useEffect(() => {
+        if (user?.id) {
+            dispatch({ type: "SET_USER_ID", userId: user.id });
+        }
+    }, [user?.id, dispatch]);
 
     // Dark mode
     useEffect(() => {
