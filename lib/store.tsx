@@ -400,9 +400,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
         return () => {
             mounted = false;
-            if (supabase) {
+            const sb = supabase;
+            if (sb) {
                 channels.forEach((ch) => {
-                    try { supabase.removeChannel(ch); } catch { /* noop */ }
+                    try { sb.removeChannel(ch); } catch { /* noop */ }
                 });
             }
         };

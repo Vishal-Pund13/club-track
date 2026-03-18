@@ -600,6 +600,7 @@ export default function AdminPage() {
                                 const canNext = end < total;
 
                                 return (
+                                    <>
                             <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginBottom: "1rem", fontWeight: 500 }}>
                                 showing {total === 0 ? 0 : start + 1} to {end} of {total} aspirants {"·"} sorted by approved pts
                             </div>
@@ -671,6 +672,7 @@ export default function AdminPage() {
                                     Next
                                 </button>
                             </div>
+                                    </>
                                 );
                             })()}
                         </motion.div>
