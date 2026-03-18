@@ -1,35 +1,37 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { motion, AnimatePresence } from "framer-motion";
 
-type Tab = "aspirant" | "admin";
-
 export default function LoginPage() {
   const router = useRouter();
-  const { login, loginAdmin, enterAsGuest } = useAuth();
+  const { sendOtp, verifyOtp, enterAsGuest } = useAuth();
 
-  const [tab, setTab] = useState<Tab>("aspirant");
   const [mobile, setMobile] = useState("");
-  const [password, setPassword] = useState("");
-  const [adminUser, setAdminUser] = useState("");
-  const [adminPass, setAdminPass] = useState("");
+  const [otp, setOtp] = useState("");
+  const [step, setStep] = useState<"mobile" | "otp">("mobile");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [resendIn, setResendIn] = useState(0);
 
-  const handleAspirantLogin = async (e: React.FormEvent) => {
+  useEffect(() => {
+    if (step !== "otp") return;
+    if (resendIn <= 0) return;
+    const t = setInterval(() => setResendIn((s) => Math.max(0, s - 1)), 1000);
+    return () => clearInterval(t);
+  }, [step, resendIn]);
+
+  const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
     try {
-      const result = await login(mobile, password);
-      if (result.ok) {
-        router.push("/ops");
-      } else {
-        setError(result.error || "Login failed.");
-      }
+      const result = await sendOtp(mobile);
+      if (!result.ok) return setError(result.error || "Failed to send OTP.");
+      setStep("otp");
+      setResendIn(30);
     } catch (err) {
       console.error(err);
       setError("A tactical error occurred.");
@@ -38,17 +40,14 @@ export default function LoginPage() {
     }
   };
 
-  const handleAdminLogin = async (e: React.FormEvent) => {
+  const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
     try {
-      const result = await loginAdmin(adminUser, adminPass);
-      if (result.ok) {
-        router.push("/admin");
-      } else {
-        setError(result.error || "Invalid admin credentials.");
-      }
+      const result = await verifyOtp(mobile, otp);
+      if (!result.ok) return setError(result.error || "OTP verification failed.");
+      router.push("/ops");
     } catch (err) {
       console.error(err);
       setError("Command link failed.");
@@ -138,33 +137,6 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {/* Tab selector */}
-        <div style={{ display: "flex", background: "rgba(78,95,59,0.08)", border: "1px solid rgba(78,95,59,0.2)", borderRadius: 8, marginBottom: "1.75rem", padding: 3 }}>
-          {(["aspirant", "admin"] as Tab[]).map((t) => (
-            <button
-              key={t}
-              onClick={() => { setTab(t); setError(""); }}
-              style={{
-                flex: 1,
-                padding: "0.5rem",
-                border: "none",
-                borderRadius: 6,
-                cursor: "pointer",
-                fontFamily: "'JetBrains Mono', monospace",
-                fontSize: "0.68rem",
-                fontWeight: 700,
-                letterSpacing: "0.1em",
-                textTransform: "uppercase",
-                transition: "all 0.2s ease",
-                background: tab === t ? "#4E5F3B" : "transparent",
-                color: tab === t ? "#e8eddf" : "rgba(160,180,130,0.5)",
-              }}
-            >
-              {t === "aspirant" ? "🪖 Aspirant" : "🔐 Admin"}
-            </button>
-          ))}
-        </div>
-
         {/* Error */}
         <AnimatePresence>
           {error && (
@@ -179,9 +151,9 @@ export default function LoginPage() {
           )}
         </AnimatePresence>
 
-        {/* Aspirant form */}
-        {tab === "aspirant" && (
-          <form onSubmit={handleAspirantLogin} style={{ display: "flex", flexDirection: "column", gap: "1.1rem" }}>
+        {/* OTP login form */}
+        {step === "mobile" && (
+          <form onSubmit={handleSendOtp} style={{ display: "flex", flexDirection: "column", gap: "1.1rem" }}>
             <div>
               <label style={labelStyle}>Mobile Number</label>
               <input
@@ -195,25 +167,12 @@ export default function LoginPage() {
                 onBlur={(e) => (e.target.style.borderColor = "rgba(78,95,59,0.3)")}
               />
             </div>
-            <div>
-              <label style={labelStyle}>Password</label>
-              <input
-                type="password"
-                placeholder="Enter your password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                style={inputStyle}
-                onFocus={(e) => (e.target.style.borderColor = "#4E5F3B")}
-                onBlur={(e) => (e.target.style.borderColor = "rgba(78,95,59,0.3)")}
-              />
-            </div>
             <button
               type="submit"
               disabled={loading}
               style={{ background: "#4E5F3B", color: "#e8eddf", border: "none", borderRadius: 8, padding: "0.85rem", fontFamily: "'Inter', sans-serif", fontSize: "0.95rem", fontWeight: 700, cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.7 : 1, transition: "all 0.2s", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}
             >
-              {loading ? "Authenticating…" : "🎯 Authenticate & Deploy"}
+              {loading ? "Sending OTP…" : "📲 Send OTP"}
             </button>
 
             <div style={{ textAlign: "center", fontSize: "0.82rem", color: "rgba(160,180,130,0.5)" }}>
@@ -225,29 +184,17 @@ export default function LoginPage() {
           </form>
         )}
 
-        {/* Admin form */}
-        {tab === "admin" && (
-          <form onSubmit={handleAdminLogin} style={{ display: "flex", flexDirection: "column", gap: "1.1rem" }}>
+        {step === "otp" && (
+          <form onSubmit={handleVerifyOtp} style={{ display: "flex", flexDirection: "column", gap: "1.1rem" }}>
             <div>
-              <label style={labelStyle}>Admin Username</label>
+              <label style={labelStyle}>OTP</label>
               <input
-                type="text"
-                placeholder="Command username"
-                value={adminUser}
-                onChange={(e) => setAdminUser(e.target.value)}
-                required
-                style={inputStyle}
-                onFocus={(e) => (e.target.style.borderColor = "#4E5F3B")}
-                onBlur={(e) => (e.target.style.borderColor = "rgba(78,95,59,0.3)")}
-              />
-            </div>
-            <div>
-              <label style={labelStyle}>Admin Password</label>
-              <input
-                type="password"
-                placeholder="Restricted access code"
-                value={adminPass}
-                onChange={(e) => setAdminPass(e.target.value)}
+                inputMode="numeric"
+                pattern="\d{6}"
+                maxLength={6}
+                placeholder="Enter 6-digit code"
+                value={otp}
+                onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
                 required
                 style={inputStyle}
                 onFocus={(e) => (e.target.style.borderColor = "#4E5F3B")}
@@ -257,10 +204,45 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              style={{ background: "#2a3520", color: "#e8eddf", border: "1px solid rgba(78,95,59,0.5)", borderRadius: 8, padding: "0.85rem", fontFamily: "'Inter', sans-serif", fontSize: "0.95rem", fontWeight: 700, cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.7 : 1, transition: "all 0.2s" }}
+              style={{ background: "#4E5F3B", color: "#e8eddf", border: "none", borderRadius: 8, padding: "0.85rem", fontFamily: "'Inter', sans-serif", fontSize: "0.95rem", fontWeight: 700, cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.7 : 1, transition: "all 0.2s" }}
             >
-              {loading ? "Verifying…" : "🔐 Access Armory"}
+              {loading ? "Verifying…" : "✅ Verify & Enter"}
             </button>
+
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.78rem", color: "rgba(160,180,130,0.55)" }}>
+              <button
+                type="button"
+                onClick={() => { setStep("mobile"); setOtp(""); setError(""); }}
+                style={{ background: "none", border: "none", color: "rgba(160,180,130,0.55)", cursor: "pointer", padding: 0 }}
+              >
+                ← Change mobile
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  setError("");
+                  setLoading(true);
+                  try {
+                    const r = await sendOtp(mobile);
+                    if (!r.ok) setError(r.error || "Failed to resend OTP.");
+                    else setResendIn(30);
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+                disabled={loading || resendIn > 0}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: resendIn > 0 ? "rgba(160,180,130,0.35)" : "#4E5F3B",
+                  fontWeight: 700,
+                  cursor: loading || resendIn > 0 ? "not-allowed" : "pointer",
+                  padding: 0,
+                }}
+              >
+                Resend OTP{resendIn > 0 ? ` (${resendIn}s)` : ""}
+              </button>
+            </div>
           </form>
         )}
 

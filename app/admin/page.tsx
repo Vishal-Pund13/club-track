@@ -154,6 +154,7 @@ export default function AdminPage() {
     const { state, addTaskRealtime, toggleTaskActiveRealtime, reviewVerification } = useApp();
     const { user, captainClubs: authCaptainClubs } = useAuth();
     const [activeTab, setActiveTab] = useState<AdminTab>("overview");
+    const [rosterPage, setRosterPage] = useState(0);
     const [form, setForm] = useState<NewMissionForm>(DEFAULT_FORM);
     const [submitted, setSubmitted] = useState(false);
     const [expandedMission, setExpandedMission] = useState<string | null>(null);
@@ -186,6 +187,11 @@ export default function AdminPage() {
             fetchCaptainAssignments();
         }
     }, [user]);
+
+    // Reset roster pagination when roster size changes (or on mount)
+    useEffect(() => {
+        setRosterPage(0);
+    }, [state.users.length]);
 
     async function assignCaptain(clubId: string, profileId: string) {
         const { supabase } = await import("@/lib/supabase");
@@ -581,8 +587,21 @@ export default function AdminPage() {
                     {/* ════════════════ ROSTER ══════════════════════════════════ */}
                     {activeTab === "roster" && (
                         <motion.div key="roster" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }} style={{ maxWidth: 820 }}>
+                            {(() => {
+                                const pageSize = 20;
+                                const sortedUsers = [...state.users].sort(
+                                    (a, b) => (todayPtsPerUser[b.id] ?? 0) - (todayPtsPerUser[a.id] ?? 0)
+                                );
+                                const total = sortedUsers.length;
+                                const start = rosterPage * pageSize;
+                                const end = Math.min(total, start + pageSize);
+                                const pageUsers = sortedUsers.slice(start, end);
+                                const canPrev = rosterPage > 0;
+                                const canNext = end < total;
+
+                                return (
                             <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginBottom: "1rem", fontWeight: 500 }}>
-                                {state.users.length} operatives · sorted by approved pts
+                                showing {total === 0 ? 0 : start + 1} to {end} of {total} aspirants · sorted by approved pts
                             </div>
                             <div style={{ display: "grid", gridTemplateColumns: "2rem 2.25rem 1fr 5rem 5rem 5.5rem", gap: "0.5rem", alignItems: "center", padding: "0.25rem 1rem", marginBottom: "0.4rem" }}>
                                 <div /><div />
@@ -592,7 +611,7 @@ export default function AdminPage() {
                                 <div style={{ fontSize: "0.67rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)", textAlign: "center" }}>Total Pts</div>
                             </div>
                             <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
-                                {[...state.users].sort((a, b) => (todayPtsPerUser[b.id] ?? 0) - (todayPtsPerUser[a.id] ?? 0)).map((user, i) => {
+                                {pageUsers.map((user, i) => {
                                     const todayPts = todayPtsPerUser[user.id] ?? 0;
                                     const missionsDoneToday = state.completions.filter(c => {
                                         const t = state.tasks.find(t2 => t2.id === c.task_id);
@@ -609,7 +628,7 @@ export default function AdminPage() {
                                             borderRadius: 10,
                                         }}>
                                             <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "0.8rem", fontWeight: 700, color: "var(--text-muted)", textAlign: "center" }}>
-                                                {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}`}
+                                                {start + i === 0 ? "🥇" : start + i === 1 ? "🥈" : start + i === 2 ? "🥉" : `${start + i + 1}`}
                                             </span>
                                             <div className="avatar" style={{ width: 30, height: 30, fontSize: "0.6rem" }}>{user.initials}</div>
                                             <div>
@@ -633,6 +652,27 @@ export default function AdminPage() {
                                     );
                                 })}
                             </div>
+
+                            <div style={{ display: "flex", justifyContent: "center", gap: "0.6rem", marginTop: "1rem" }}>
+                                <button
+                                    className="btn-neutral"
+                                    onClick={() => setRosterPage(p => Math.max(0, p - 1))}
+                                    disabled={!canPrev}
+                                    style={{ opacity: canPrev ? 1 : 0.5, cursor: canPrev ? "pointer" : "not-allowed" }}
+                                >
+                                    Previous
+                                </button>
+                                <button
+                                    className="btn-neutral"
+                                    onClick={() => setRosterPage(p => p + 1)}
+                                    disabled={!canNext}
+                                    style={{ opacity: canNext ? 1 : 0.5, cursor: canNext ? "pointer" : "not-allowed" }}
+                                >
+                                    Next
+                                </button>
+                            </div>
+                                );
+                            })()}
                         </motion.div>
                     )}
 

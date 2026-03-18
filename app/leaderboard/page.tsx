@@ -49,7 +49,7 @@ export default function LeaderboardPage() {
                 return { ...u, score };
             })
             .sort((a, b) => b.score - a.score);
-    }, [state.users, filter, scores]);
+    }, [state.users, state.completions, state.tasks, filter, scores]);
 
     const maxScore = sorted[0]?.score ?? 1;
 

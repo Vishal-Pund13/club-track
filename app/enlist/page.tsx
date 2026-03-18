@@ -11,23 +11,23 @@ const ASPIRANT_TYPES: AspirantType[] = [
 
 export default function EnlistPage() {
   const router = useRouter();
-  const { register } = useAuth();
+  const { sendOtp, verifyOtp } = useAuth();
 
   const [form, setForm] = useState({
     name: "",
     mobile: "",
     city: "",
     aspirantType: "" as AspirantType | "",
-    password: "",
-    confirmPassword: "",
   });
+  const [otp, setOtp] = useState("");
+  const [step, setStep] = useState<"form" | "otp">("form");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const set = (k: keyof typeof form, v: string) =>
     setForm((f) => ({ ...f, [k]: v }));
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
@@ -35,24 +35,39 @@ export default function EnlistPage() {
       return setError("Mobile number must be exactly 10 digits.");
     }
     if (!form.aspirantType) return setError("Select your aspirant entry type.");
-    if (form.password.length < 6) return setError("Password must be at least 6 characters.");
-    if (form.password !== form.confirmPassword)
-      return setError("Passwords do not match. Soldier, stay sharp!");
 
     setLoading(true);
     try {
-      const result = await register({
+      const result = await sendOtp(form.mobile, {
         name: form.name,
-        mobile: form.mobile,
         city: form.city,
         aspirantType: form.aspirantType as AspirantType,
-        password: form.password,
+        role: "aspirant",
       });
+      if (!result.ok) return setError(result.error || "Failed to send OTP. Try again.");
+      setStep("otp");
+    } catch (err) {
+      console.error(err);
+      setError("A tactical error occurred. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    try {
+      const result = await verifyOtp(form.mobile, otp, {
+        name: form.name,
+        city: form.city,
+        aspirantType: form.aspirantType as AspirantType,
+      });
       if (result.ok) {
         router.push("/ops");
       } else {
-        setError(result.error || "Enlistment failed. Try again.");
+        setError(result.error || "OTP verification failed. Try again.");
       }
     } catch (err) {
       console.error(err);
@@ -152,7 +167,8 @@ export default function EnlistPage() {
           )}
         </AnimatePresence>
 
-        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1.1rem" }}>
+        {step === "form" && (
+          <form onSubmit={handleSendOtp} style={{ display: "flex", flexDirection: "column", gap: "1.1rem" }}>
           {/* Name */}
           <div>
             <label style={labelStyle}>Full Name</label>
@@ -219,42 +235,12 @@ export default function EnlistPage() {
             </select>
           </div>
 
-          {/* Password */}
-          <div>
-            <label style={labelStyle}>Password</label>
-            <input
-              type="password"
-              placeholder="Min 6 characters"
-              value={form.password}
-              onChange={(e) => set("password", e.target.value)}
-              required
-              style={inputStyle}
-              onFocus={(e) => (e.target.style.borderColor = "#4E5F3B")}
-              onBlur={(e) => (e.target.style.borderColor = "rgba(78,95,59,0.3)")}
-            />
-          </div>
-
-          {/* Confirm Password */}
-          <div>
-            <label style={labelStyle}>Confirm Password</label>
-            <input
-              type="password"
-              placeholder="Re-enter password"
-              value={form.confirmPassword}
-              onChange={(e) => set("confirmPassword", e.target.value)}
-              required
-              style={inputStyle}
-              onFocus={(e) => (e.target.style.borderColor = "#4E5F3B")}
-              onBlur={(e) => (e.target.style.borderColor = "rgba(78,95,59,0.3)")}
-            />
-          </div>
-
           <button
             type="submit"
             disabled={loading}
             style={{ background: "linear-gradient(135deg,#4E5F3B,#3a472c)", color: "#e8eddf", border: "none", borderRadius: 8, padding: "0.9rem", fontFamily: "'Inter', sans-serif", fontSize: "0.95rem", fontWeight: 700, cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.7 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem", boxShadow: "0 0 20px rgba(78,95,59,0.3)", transition: "all 0.2s" }}
           >
-            {loading ? "Processing Enlistment…" : "🎖 Complete Enlistment"}
+            {loading ? "Sending OTP…" : "📲 Send OTP"}
           </button>
 
           <p style={{ textAlign: "center", fontSize: "0.82rem", color: "rgba(160,180,130,0.5)", margin: 0 }}>
@@ -264,6 +250,46 @@ export default function EnlistPage() {
             </button>
           </p>
         </form>
+        )}
+
+        {step === "otp" && (
+          <form onSubmit={handleVerifyOtp} style={{ display: "flex", flexDirection: "column", gap: "1.1rem" }}>
+            <div>
+              <label style={labelStyle}>OTP</label>
+              <input
+                inputMode="numeric"
+                pattern="\d{6}"
+                maxLength={6}
+                placeholder="Enter 6-digit code"
+                value={otp}
+                onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                required
+                style={inputStyle}
+                onFocus={(e) => (e.target.style.borderColor = "#4E5F3B")}
+                onBlur={(e) => (e.target.style.borderColor = "rgba(78,95,59,0.3)")}
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              style={{ background: "linear-gradient(135deg,#4E5F3B,#3a472c)", color: "#e8eddf", border: "none", borderRadius: 8, padding: "0.9rem", fontFamily: "'Inter', sans-serif", fontSize: "0.95rem", fontWeight: 700, cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.7 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem", boxShadow: "0 0 20px rgba(78,95,59,0.3)", transition: "all 0.2s" }}
+            >
+              {loading ? "Verifying…" : "✅ Verify & Enter"}
+            </button>
+
+            <div style={{ textAlign: "center", fontSize: "0.82rem", color: "rgba(160,180,130,0.5)" }}>
+              Wrong number?{" "}
+              <button
+                type="button"
+                onClick={() => { setStep("form"); setOtp(""); setError(""); }}
+                style={{ background: "none", border: "none", color: "#4E5F3B", fontWeight: 600, cursor: "pointer", fontSize: "0.82rem", padding: 0 }}
+              >
+                Edit details →
+              </button>
+            </div>
+          </form>
+        )}
 
         <p style={{ textAlign: "center", fontSize: "0.65rem", color: "rgba(78,95,59,0.35)", marginTop: "1.25rem", fontFamily: "'JetBrains Mono', monospace", letterSpacing: "0.08em" }}>
           SSB MISSION HEADQUARTERS · INDIA

@@ -45,7 +45,6 @@ export interface RegisterData {
   mobile: string;
   city: string;
   aspirantType: AspirantType;
-  password: string;
 }
 
 interface AuthState {
@@ -58,9 +57,20 @@ interface AuthState {
 }
 
 interface AuthContextValue extends AuthState {
-  login: (mobile: string, password: string) => Promise<{ ok: boolean; error?: string }>;
-  loginAdmin: (username: string, password: string) => Promise<{ ok: boolean; error?: string }>;
-  register: (data: RegisterData) => Promise<{ ok: boolean; error?: string }>;
+  sendOtp: (
+    mobile: string,
+    options?: {
+      name?: string;
+      city?: string;
+      aspirantType?: AspirantType;
+      role?: "aspirant" | "admin";
+    }
+  ) => Promise<{ ok: boolean; error?: string }>;
+  verifyOtp: (
+    mobile: string,
+    otp: string,
+    registrationData?: { name: string; city: string; aspirantType: AspirantType }
+  ) => Promise<{ ok: boolean; error?: string }>;
   logout: () => Promise<void>;
   enterAsGuest: () => void;
   addPersonalTodo: (title: string) => Promise<void>;
@@ -94,18 +104,8 @@ function profileToAuthUser(p: DBProfile): AuthUser {
 
 // ─── LocalStorage fallback (used when supabase is not configured) ─────────────
 
-const LS_USERS = "ct_users";
 const LS_SESSION = "ct_session";
 const LS_TODOS = "ct_personal_todos";
-const ADMIN_CREDS = { username: "admin", password: "admin@ct2025" };
-
-function ls_getUsers(): (RegisterData & { id: string; initials: string })[] {
-  if (typeof window === "undefined") return [];
-  try { return JSON.parse(localStorage.getItem(LS_USERS) || "[]"); } catch { return []; }
-}
-function ls_saveUsers(u: (RegisterData & { id: string; initials: string })[]) {
-  localStorage.setItem(LS_USERS, JSON.stringify(u));
-}
 function ls_getSession(): AuthUser | null {
   if (typeof window === "undefined") return null;
   try { return JSON.parse(localStorage.getItem(LS_SESSION) || "null"); } catch { return null; }
@@ -125,6 +125,12 @@ function ls_saveTodos(t: PersonalTodo[]) {
 // ─── Context ──────────────────────────────────────────────────────────────────
 
 const AuthContext = createContext<AuthContextValue | null>(null);
+
+function formatIndianMobileToE164(mobile: string) {
+  const digits = mobile.replace(/\D/g, "");
+  const ten = digits.slice(-10);
+  return `+91${ten}`;
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -236,143 +242,87 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  // ── Login ────────────────────────────────────────────────────────────────────
+  // ── Phone OTP Auth (Supabase) ────────────────────────────────────────────────
 
-  const login = async (mobile: string, password: string): Promise<{ ok: boolean; error?: string }> => {
+  const sendOtp: AuthContextValue["sendOtp"] = async (mobile, options) => {
     const cleanMobile = mobile.trim();
-    const cleanPass = password.trim();
+    const digits = cleanMobile.replace(/\D/g, "");
+    if (digits.length !== 10) return { ok: false, error: "Mobile number must be exactly 10 digits." };
 
     if (!isSupabaseConfigured || !supabase) {
-      // LocalStorage fallback
-      const users = ls_getUsers();
-      const found = users.find((u) => u.mobile === cleanMobile && u.password === cleanPass);
-      if (!found) return { ok: false, error: "Invalid mobile number or password." };
-      const authUser: AuthUser = {
-        id: found.id, name: found.name, initials: found.initials,
-        mobile: found.mobile, city: found.city, aspirantType: found.aspirantType,
-        role: "aspirant", streak: 0,
-      };
-      setUser(authUser); setIsGuest(false);
-      ls_saveSession(authUser);
-      setPersonalTodos(ls_getTodos());
-      return { ok: true };
+      return { ok: false, error: "Supabase is not configured. Phone OTP login is unavailable." };
     }
 
-    setLoading(true);
-    const email = `${cleanMobile.replace(/\s/g, "")}@clubtrack.app`;
-    console.log("[Auth] Attempting login with:", email);
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password: cleanPass });
-    
-    if (error) {
-      console.error("[Auth] Login Error:", error.message);
-      setLoading(false);
-      return { ok: false, error: error.message };
-    }
+    const phone = formatIndianMobileToE164(cleanMobile);
+    const initials = options?.name ? makeInitials(options.name) : undefined;
+    const role = options?.role ?? "aspirant";
 
-    if (data.user) {
-      await loadProfileAndTodos(data.user.id);
-    }
-    setLoading(false);
-    return { ok: true };
-  };
-
-  // ── Admin Login ──────────────────────────────────────────────────────────────
-
-  const loginAdmin = async (username: string, password: string): Promise<{ ok: boolean; error?: string }> => {
-    const cleanUser = username.trim();
-    const cleanPass = password.trim();
-
-    // Admin Master Bypass: Allow the test credentials to ALWAYS work for initial setup natively
-    // if using Supabase, we MUST route it through the real database login for RLS to work.
-    if (!isSupabaseConfigured && cleanUser === ADMIN_CREDS.username && cleanPass === ADMIN_CREDS.password) {
-      console.log("[Admin] Local Master Bypass triggered (No DB connected).");
-      const adminUser: AuthUser = {
-        id: "admin", name: "Admin", initials: "AD", mobile: "", city: "HQ",
-        aspirantType: "Other", role: "admin", streak: 0,
-      };
-      setUser(adminUser); setIsGuest(false); ls_saveSession(adminUser);
-      return { ok: true };
-    }
-
-    if (!isSupabaseConfigured || !supabase) {
-      return { ok: false, error: "Invalid admin credentials." };
-    }
-
-    setLoading(true);
-    const email = `${cleanUser}@clubtrack.app`;
-    console.log("[Admin] Attempting Supabase Login:", email);
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password: cleanPass });
-    
-    if (error) {
-      console.error("[Admin] Supabase Login Error:", error.message);
-      setLoading(false);
-      // Surface actual error to know if it's a rate limit vs actual credential mismatch
-      return { ok: false, error: error.message };
-    }
-
-    if (data.user) {
-      await loadProfileAndTodos(data.user.id);
-    }
-    setLoading(false);
-    return { ok: true };
-  };
-
-  // ── Register ─────────────────────────────────────────────────────────────────
-
-  const register = async (data: RegisterData): Promise<{ ok: boolean; error?: string }> => {
-    if (!isSupabaseConfigured || !supabase) {
-      // LocalStorage fallback
-      const users = ls_getUsers();
-      if (users.find((u) => u.mobile === data.mobile)) {
-        return { ok: false, error: "Mobile number already registered. Please login." };
-      }
-      const newUser = { ...data, id: `u_${Date.now()}`, initials: makeInitials(data.name) };
-      ls_saveUsers([...users, newUser]);
-      const authUser: AuthUser = {
-        id: newUser.id, name: newUser.name, initials: newUser.initials,
-        mobile: newUser.mobile, city: newUser.city, aspirantType: newUser.aspirantType,
-        role: "aspirant", streak: 0,
-      };
-      setUser(authUser); setIsGuest(false); ls_saveSession(authUser);
-      return { ok: true };
-    }
-
-    console.log("Starting enlistment for:", data.mobile);
-    const email = `${data.mobile.replace(/\s/g, "")}@clubtrack.app`;
-    const initials = makeInitials(data.name);
-
-    // 1. Sign up the user in Supabase Auth
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email,
-      password: data.password,
-      options: {
-        data: {
-          name: data.name,
-          initials,
-          mobile: data.mobile,
-          city: data.city,
-          aspirant_type: data.aspirantType,
-          role: "aspirant",
-        },
-      },
+    const { error } = await supabase.auth.signInWithOtp({
+      phone,
+      options: options
+        ? {
+            data: {
+              ...(options.name ? { name: options.name } : {}),
+              ...(initials ? { initials } : {}),
+              mobile: cleanMobile,
+              ...(options.city ? { city: options.city } : {}),
+              ...(options.aspirantType ? { aspirant_type: options.aspirantType } : {}),
+              role,
+            },
+          }
+        : undefined,
     });
 
-    if (authError) {
-      return { ok: false, error: authError.message };
-    }
+    if (error) return { ok: false, error: error.message };
+    return { ok: true };
+  };
 
-    if (!authData.user) return { ok: false, error: "Enlistment failed. No user ID returned." };
+  const verifyOtp: AuthContextValue["verifyOtp"] = async (mobile, otp, registrationData) => {
+    const cleanMobile = mobile.trim();
+    const digits = cleanMobile.replace(/\D/g, "");
+    if (digits.length !== 10) return { ok: false, error: "Mobile number must be exactly 10 digits." };
+    if (!otp.trim()) return { ok: false, error: "Enter the 6-digit OTP." };
+
+    if (!isSupabaseConfigured || !supabase) {
+      return { ok: false, error: "Supabase is not configured. Phone OTP login is unavailable." };
+    }
 
     setLoading(true);
     try {
-      // 2. Load Profile (Fallback metadata will cover us if DB trigger is slow)
-      await loadProfileAndTodos(authData.user.id);
-    } catch (e) {
-      console.warn("Profile sync warning:", e);
-    }
-    setLoading(false);
+      const phone = formatIndianMobileToE164(cleanMobile);
+      const { data, error } = await supabase.auth.verifyOtp({
+        type: "sms",
+        phone,
+        token: otp.trim(),
+      });
 
-    return { ok: true };
+      if (error) return { ok: false, error: error.message };
+
+      if (data.user) {
+        // If this was registration, ensure profile exists/updated
+        if (registrationData) {
+          const initials = makeInitials(registrationData.name);
+          const { error: upsertError } = await supabase.from("profiles").upsert({
+            id: data.user.id,
+            name: registrationData.name,
+            initials,
+            mobile: cleanMobile,
+            city: registrationData.city,
+            aspirant_type: registrationData.aspirantType,
+            role: "aspirant",
+          });
+          if (upsertError) return { ok: false, error: upsertError.message };
+        }
+
+        await loadProfileAndTodos(data.user.id);
+      }
+
+      return { ok: true };
+    } catch (e: any) {
+      return { ok: false, error: e?.message || "OTP verification failed." };
+    } finally {
+      setLoading(false);
+    }
   };
 
   // ── Logout ───────────────────────────────────────────────────────────────────
@@ -424,7 +374,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         user, isGuest, isAdmin: user?.role === "admin",
         personalTodos, loading, captainClubs,
-        login, loginAdmin, register, logout, enterAsGuest,
+        sendOtp, verifyOtp, logout, enterAsGuest,
         addPersonalTodo, togglePersonalTodo, deletePersonalTodo,
       }}
     >

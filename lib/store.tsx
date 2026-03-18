@@ -51,6 +51,8 @@ type Action =
     | { type: "SET_ACTIVE_CLUB"; clubId: string }
     | { type: "SUBMIT_VERIFICATION"; verification: Verification }
     | { type: "UPDATE_VERIFICATION"; id: string; status: VerifStatus; reviewNote?: string; reviewedBy?: string }
+    | { type: "UPSERT_VERIFICATION"; verification: Verification }
+    | { type: "UPDATE_USER"; user: Partial<User> & { id: string } }
     | { type: "TOGGLE_DARK_MODE" }
     | { type: "ADD_TASK"; task: Task }
     | { type: "TOGGLE_TASK_ACTIVE"; taskId: string }
@@ -130,6 +132,34 @@ function reducer(state: AppState, action: Action): AppState {
                 userClubPoints,
                 users: updatedUsers,
             };
+        }
+
+        case "UPSERT_VERIFICATION": {
+            const incoming = action.verification;
+            const idx = state.verifications.findIndex(v => v.id === incoming.id);
+            const verifications =
+                idx === -1
+                    ? [...state.verifications, incoming]
+                    : state.verifications.map(v => (v.id === incoming.id ? incoming : v));
+
+            const approvedCompletions: Completion[] = verifications
+                .filter(v => v.status === "approved")
+                .map(v => ({ user_id: v.user_id, task_id: v.task_id, completed_at: v.submitted_at }));
+
+            const { userClubPoints, updatedUsers } = buildClubPoints(approvedCompletions, state.tasks, state.users);
+
+            return {
+                ...state,
+                verifications,
+                completions: approvedCompletions,
+                userClubPoints,
+                users: updatedUsers,
+            };
+        }
+
+        case "UPDATE_USER": {
+            const updatedUsers = state.users.map(u => (u.id === action.user.id ? { ...u, ...action.user } : u));
+            return { ...state, users: updatedUsers };
         }
 
         case "TOGGLE_DARK_MODE":
@@ -280,20 +310,101 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
         loadData();
 
-        let channel: any;
+        let channels: any[] = [];
         if (isSupabaseConfigured && supabase) {
-            channel = supabase
-                .channel("schema-db-changes")
-                .on("postgres_changes", { event: "*", schema: "public" }, () => {
-                    console.log("[Sync] Supabase data changed. Refetching...");
-                    if (mounted) loadData();
-                })
+            // Targeted realtime subscriptions (avoid thundering herd full refetches)
+            const verifChannel = supabase
+                .channel("task-verifications-changes")
+                .on(
+                    "postgres_changes",
+                    { event: "INSERT", schema: "public", table: "task_verifications" },
+                    (payload: any) => {
+                        if (!mounted) return;
+                        const v = payload.new as DBVerification;
+                        const verification: Verification = {
+                            id: v.id,
+                            task_id: v.task_id,
+                            user_id: v.user_id,
+                            proof_text: v.proof_text,
+                            status: v.status,
+                            reviewed_by: v.reviewed_by,
+                            reviewed_at: v.reviewed_at,
+                            review_note: v.review_note,
+                            submitted_at: v.submitted_at,
+                        };
+                        dispatch({ type: "UPSERT_VERIFICATION", verification });
+                    }
+                )
+                .on(
+                    "postgres_changes",
+                    { event: "UPDATE", schema: "public", table: "task_verifications" },
+                    (payload: any) => {
+                        if (!mounted) return;
+                        const v = payload.new as DBVerification;
+                        const verification: Verification = {
+                            id: v.id,
+                            task_id: v.task_id,
+                            user_id: v.user_id,
+                            proof_text: v.proof_text,
+                            status: v.status,
+                            reviewed_by: v.reviewed_by,
+                            reviewed_at: v.reviewed_at,
+                            review_note: v.review_note,
+                            submitted_at: v.submitted_at,
+                        };
+                        dispatch({ type: "UPSERT_VERIFICATION", verification });
+                    }
+                )
                 .subscribe();
+
+            const tasksChannel = supabase
+                .channel("tasks-inserts")
+                .on(
+                    "postgres_changes",
+                    { event: "INSERT", schema: "public", table: "tasks" },
+                    (payload: any) => {
+                        if (!mounted) return;
+                        const task = payload.new as Task;
+                        dispatch({ type: "ADD_TASK", task });
+                    }
+                )
+                .subscribe();
+
+            const profilesChannel = supabase
+                .channel("profiles-updates")
+                .on(
+                    "postgres_changes",
+                    { event: "UPDATE", schema: "public", table: "profiles" },
+                    (payload: any) => {
+                        if (!mounted) return;
+                        const p = payload.new as any;
+                        dispatch({
+                            type: "UPDATE_USER",
+                            user: {
+                                id: p.id,
+                                name: p.name,
+                                initials: p.initials,
+                                ssb_board: p.ssb_board ?? "Unknown",
+                                streak: p.streak,
+                                role: (p.role === "admin" ? "admin" : "aspirant") as "admin" | "aspirant",
+                                city: p.city ?? "",
+                                aspirantType: p.aspirant_type ?? "Other",
+                            },
+                        });
+                    }
+                )
+                .subscribe();
+
+            channels = [verifChannel, tasksChannel, profilesChannel];
         }
 
         return () => {
             mounted = false;
-            if (channel && supabase) supabase.removeChannel(channel);
+            if (supabase) {
+                channels.forEach((ch) => {
+                    try { supabase.removeChannel(ch); } catch { /* noop */ }
+                });
+            }
         };
     }, []);
 

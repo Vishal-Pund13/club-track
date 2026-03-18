@@ -67,6 +67,9 @@ CREATE TABLE public.tasks (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Index for fast "today's missions" queries
+CREATE INDEX IF NOT EXISTS idx_tasks_date_active ON public.tasks (date, active);
+
 -- ─── 5. TASK VERIFICATIONS ───────────────────────────
 CREATE TABLE public.task_verifications (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -80,6 +83,10 @@ CREATE TABLE public.task_verifications (
   submitted_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE (task_id, user_id)          
 );
+
+-- Indexes for fast verification lookups
+CREATE INDEX IF NOT EXISTS idx_task_verifications_user_status ON public.task_verifications (user_id, status);
+CREATE INDEX IF NOT EXISTS idx_task_verifications_task_id ON public.task_verifications (task_id);
 
 -- ─── 6. PERSONAL TODOS ────────────────────────────────────
 CREATE TABLE public.personal_todos (
