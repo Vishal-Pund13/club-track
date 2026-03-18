@@ -103,7 +103,7 @@ h3 {
 }
 
 .main-panel {
-  padding: 1.25rem 1rem 5.5rem;
+  padding: 1.25rem 1rem 8rem;
   /* extra padding at bottom for tab bar */
   background: var(--bg);
   flex: 1;
@@ -123,7 +123,7 @@ h3 {
 .page-main {
   flex: 1;
   overflow: auto;
-  padding: 1.25rem 1rem 5.5rem;
+  padding: 1.25rem 1rem 8rem;
   background: var(--bg);
 }
 

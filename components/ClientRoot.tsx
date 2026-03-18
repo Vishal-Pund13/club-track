@@ -20,14 +20,6 @@ export default function ClientRoot({ children }: { children: React.ReactNode }) 
         }
     }, [user?.id, dispatch]);
 
-    // Dark mode
-    useEffect(() => {
-        if (state.darkMode) {
-            document.documentElement.classList.add("dark");
-        } else {
-            document.documentElement.classList.remove("dark");
-        }
-    }, [state.darkMode]);
 
     // Auth guard — redirect unauthenticated non-guests away from protected routes
     useEffect(() => {

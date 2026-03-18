@@ -18,7 +18,7 @@ function ProofModal({
     onClose,
 }: {
     task: Task;
-    onSubmit: (proofText: string) => void;
+    onSubmit: (proofText: string) => Promise<void> | void;
     onClose: () => void;
 }) {
     const [proof, setProof] = useState("");
@@ -27,9 +27,17 @@ function ProofModal({
     async function handle(e: React.FormEvent) {
         e.preventDefault();
         setSubmitting(true);
-        await onSubmit(proof.trim());
-        setSubmitting(false);
-        onClose();
+        try {
+            await Promise.race([
+                onSubmit(proof.trim()),
+                new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 8000))
+            ]);
+        } catch (err) {
+            console.warn("[Submission] Failed or timed out:", err);
+        } finally {
+            setSubmitting(false);
+            onClose();
+        }
     }
 
     return (
@@ -507,22 +515,6 @@ export default function MainPanel() {
 
     return (
         <main className="main-panel">
-            {/* Mobile Squad Selector */}
-            <div className="mobile-club-selector">
-                <button onClick={() => dispatch({ type: "SET_ACTIVE_CLUB", clubId: "all" })}
-                    className={`pill ${isAllSquads ? "pill-amber" : "pill-neutral"}`}
-                    style={{ whiteSpace: "nowrap", cursor: "pointer", border: "none" }}>
-                    🌐 All Squads
-                </button>
-                {state.clubs.map((c) => (
-                    <button key={c.id} onClick={() => dispatch({ type: "SET_ACTIVE_CLUB", clubId: c.id })}
-                        className={`pill ${state.activeClubId === c.id ? "pill-amber" : "pill-neutral"}`}
-                        style={{ whiteSpace: "nowrap", cursor: "pointer", border: "none" }}>
-                        {c.icon} {c.name}
-                    </button>
-                ))}
-            </div>
-
             {/* Heading */}
             <div style={{ marginBottom: "1.1rem" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
@@ -637,23 +629,8 @@ export default function MainPanel() {
                         </button>
                     </form>
 
-                    <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                        <AnimatePresence mode="popLayout">
-                            {personalTodos.length === 0 ? (
-                                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} key="empty-pt"
-                                    style={{ textAlign: "center", padding: "2rem 1rem", color: "var(--text-muted)", fontSize: "0.85rem", border: "0.5px dashed var(--border)", borderRadius: 10 }}>
-                                    No private missions yet. Add your personal targets above.
-                                </motion.div>
-                            ) : (
-                                personalTodos.map(todo => (
-                                    <PersonalMissionCard key={todo.id} todo={todo} onToggle={togglePersonalTodo} onDelete={deletePersonalTodo} />
-                                ))
-                            )}
-                        </AnimatePresence>
-                    </div>
-
                     {personalTodos.length > 0 && (
-                        <div style={{ marginTop: "1.25rem", background: "var(--surface)", border: "0.5px solid var(--border)", borderRadius: 10, padding: "1rem 1.25rem" }}>
+                        <div style={{ marginBottom: "1.25rem", background: "var(--surface)", border: "0.5px solid var(--border)", borderRadius: 10, padding: "1rem 1.25rem" }}>
                             <div className="progress-track" style={{ marginBottom: "0.4rem" }}>
                                 <motion.div className="progress-fill"
                                     animate={{ width: `${personalTodos.length === 0 ? 0 : Math.round((personalTodos.filter(t => t.done).length / personalTodos.length) * 100)}%` }}
@@ -665,6 +642,55 @@ export default function MainPanel() {
                             </div>
                         </div>
                     )}
+
+                    <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+                        {(() => {
+                            const todosByDate = personalTodos.reduce((acc, todo) => {
+                                const d = todo.createdAt ? todo.createdAt.slice(0, 10) : TODAY;
+                                if (!acc[d]) acc[d] = [];
+                                acc[d].push(todo);
+                                return acc;
+                            }, {} as Record<string, typeof personalTodos>);
+
+                            const sortedDates = Object.keys(todosByDate).sort((a, b) => b.localeCompare(a));
+
+                            if (personalTodos.length === 0) {
+                                return (
+                                    <div style={{ textAlign: "center", padding: "2rem 1rem", color: "var(--text-muted)", fontSize: "0.85rem", border: "0.5px dashed var(--border)", borderRadius: 10 }}>
+                                        No private missions yet. Add your personal targets above.
+                                    </div>
+                                );
+                            }
+
+                            return sortedDates.map(dateKey => {
+                                const isToday = dateKey === TODAY;
+                                const dateLabel = isToday ? "Today" : new Date(dateKey).toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" });
+                                const todos = todosByDate[dateKey];
+                                const doneCount = todos.filter(t => t.done).length;
+
+                                return (
+                                    <div key={dateKey}>
+                                        <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", marginBottom: "0.65rem" }}>
+                                            <span style={{ fontSize: "0.7rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--text-muted)", whiteSpace: "nowrap" }}>
+                                                {isToday ? "📅 " : ""}{dateLabel}
+                                            </span>
+                                            <div style={{ flex: 1, height: "0.5px", background: "var(--border)" }} />
+                                            <span style={{ fontSize: "0.65rem", fontWeight: 600, color: "var(--text-muted)", fontFamily: "'JetBrains Mono', monospace" }}>
+                                                {doneCount}/{todos.length}
+                                            </span>
+                                        </div>
+                                        <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                                            <AnimatePresence mode="popLayout">
+                                                {todos.map(todo => (
+                                                    <PersonalMissionCard key={todo.id} todo={todo} onToggle={togglePersonalTodo} onDelete={deletePersonalTodo} />
+                                                ))}
+                                            </AnimatePresence>
+                                        </div>
+                                    </div>
+                                );
+                            });
+                        })()}
+                    </div>
                 </>
             )}
         </main>

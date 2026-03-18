@@ -17,6 +17,17 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: `
+          try {
+            const saved = localStorage.getItem('ct_darkmode');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            if (saved === 'true' || (saved === null && prefersDark)) {
+              document.documentElement.classList.add('dark');
+            }
+          } catch (e) {}
+        ` }} />
+      </head>
       <body>
         <AuthProvider>
           <AppProvider>

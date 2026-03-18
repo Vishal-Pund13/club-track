@@ -180,6 +180,33 @@ const initialState: AppState = {
 export function AppProvider({ children }: { children: ReactNode }) {
     const [state, dispatch] = useReducer(reducer, initialState);
 
+    // Dark Mode Persistence
+    useEffect(() => {
+        try {
+            const saved = localStorage.getItem('ct_darkmode');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const initialDark = saved !== null ? saved === 'true' : prefersDark;
+            if (initialDark) {
+                dispatch({ type: "TOGGLE_DARK_MODE" });
+            }
+        } catch (e) {
+            console.error("Dark mode initialization failed", e);
+        }
+    }, []);
+
+    useEffect(() => {
+        try {
+            localStorage.setItem('ct_darkmode', state.darkMode.toString());
+            if (state.darkMode) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        } catch (e) {
+            console.error("Failed to save dark mode preference", e);
+        }
+    }, [state.darkMode]);
+
     // Load data on mount
     useEffect(() => {
         let mounted = true;

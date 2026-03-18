@@ -5,7 +5,7 @@ import { useAuth } from "@/lib/auth";
 import { Club } from "@/lib/data";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Moon, Sun, Crosshair, Trophy, Settings, LogOut, Shield } from "lucide-react";
+import { Crosshair, Trophy, Settings, LogOut, Shield } from "lucide-react";
 
 function ClubItem({ club }: { club: Club }) {
     const { state, dispatch } = useApp();
@@ -111,16 +111,8 @@ export default function Sidebar() {
                 {state.clubs.map((club) => <ClubItem key={club.id} club={club} />)}
             </div>
 
-            {/* Bottom: dark mode + user */}
+            {/* Bottom: user row */}
             <div style={{ borderTop: "0.5px solid var(--border)", padding: "0.75rem 1rem" }}>
-                <button
-                    onClick={() => dispatch({ type: "TOGGLE_DARK_MODE" })}
-                    style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-sub)", display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.8rem", padding: "0.4rem 0", width: "100%", marginBottom: "0.5rem" }}
-                >
-                    {state.darkMode ? <Sun size={14} /> : <Moon size={14} />}
-                    {state.darkMode ? "Light mode" : "Dark mode"}
-                </button>
-
                 <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
                     <div className="avatar" style={{ width: 34, height: 34 }}>
                         {displayInitials}
