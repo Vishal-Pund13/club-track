@@ -14,6 +14,7 @@ export const supabase = isSupabaseConfigured
 
 export interface DBProfile {
     id: string;
+    username?: string | null;
     name: string;
     initials: string;
     mobile: string | null;

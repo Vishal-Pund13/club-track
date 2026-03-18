@@ -283,8 +283,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
                     id: string; name: string; initials: string; ssb_board: string | null;
                     streak: number; total_pts?: number;
                     role?: string; city?: string | null; aspirant_type?: string | null;
+                    username?: string | null;
                 }) => ({
                     id: p.id, name: p.name, initials: p.initials,
+                    username: p.username ?? undefined,
                     ssb_board: p.ssb_board ?? "Unknown",
                     streak: p.streak, total_pts: 0,
                     role: (p.role === "admin" ? "admin" : "aspirant") as "admin" | "aspirant",
@@ -382,6 +384,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
                             type: "UPDATE_USER",
                             user: {
                                 id: p.id,
+                                username: p.username ?? undefined,
                                 name: p.name,
                                 initials: p.initials,
                                 ssb_board: p.ssb_board ?? "Unknown",

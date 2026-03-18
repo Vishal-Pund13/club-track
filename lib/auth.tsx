@@ -57,6 +57,7 @@ interface AuthState {
 }
 
 interface AuthContextValue extends AuthState {
+  login: (mobile: string, password: string) => Promise<{ ok: boolean; error?: string }>;
   sendOtp: (
     mobile: string,
     options?: {
@@ -71,6 +72,7 @@ interface AuthContextValue extends AuthState {
     otp: string,
     registrationData?: { name: string; city: string; aspirantType: AspirantType }
   ) => Promise<{ ok: boolean; error?: string }>;
+  setPassword: (password: string) => Promise<{ ok: boolean; error?: string }>;
   logout: () => Promise<void>;
   enterAsGuest: () => void;
   addPersonalTodo: (title: string) => Promise<void>;
@@ -130,6 +132,11 @@ function formatIndianMobileToE164(mobile: string) {
   const digits = mobile.replace(/\D/g, "");
   const ten = digits.slice(-10);
   return `+91${ten}`;
+}
+
+function mobileToInternalEmail(mobile: string) {
+  const digits = mobile.replace(/\D/g, "").slice(-10);
+  return `${digits}@clubtrack.app`;
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -244,6 +251,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // ── Phone OTP Auth (Supabase) ────────────────────────────────────────────────
 
+  // Login with mobile + password (email is derived internally)
+  const login: AuthContextValue["login"] = async (mobile, password) => {
+    const cleanMobile = mobile.trim();
+    const cleanPass = password.trim();
+    const digits = cleanMobile.replace(/\D/g, "");
+    if (digits.length !== 10) return { ok: false, error: "Mobile number must be exactly 10 digits." };
+    if (cleanPass.length < 6) return { ok: false, error: "Password must be at least 6 characters." };
+
+    if (!isSupabaseConfigured || !supabase) {
+      return { ok: false, error: "Supabase is not configured. Password login is unavailable." };
+    }
+
+    setLoading(true);
+    try {
+      const email = mobileToInternalEmail(cleanMobile);
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password: cleanPass });
+      if (error) return { ok: false, error: error.message };
+      if (data.user) await loadProfileAndTodos(data.user.id);
+      return { ok: true };
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const sendOtp: AuthContextValue["sendOtp"] = async (mobile, options) => {
     const cleanMobile = mobile.trim();
     const digits = cleanMobile.replace(/\D/g, "");
@@ -312,6 +343,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             role: "aspirant",
           });
           if (upsertError) return { ok: false, error: upsertError.message };
+
+          // Best-effort: set internal email so password login works later (may require email confirmations disabled)
+          const { data: sessionData } = await supabase.auth.getSession();
+          const existingEmail = sessionData.session?.user?.email;
+          const desiredEmail = mobileToInternalEmail(cleanMobile);
+          if (!existingEmail) {
+            try { await supabase.auth.updateUser({ email: desiredEmail }); } catch { /* ignore */ }
+          }
         }
 
         await loadProfileAndTodos(data.user.id);
@@ -320,6 +359,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { ok: true };
     } catch (e: any) {
       return { ok: false, error: e?.message || "OTP verification failed." };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // After OTP registration, aspirant sets a password for future logins
+  const setPassword: AuthContextValue["setPassword"] = async (password) => {
+    const cleanPass = password.trim();
+    if (cleanPass.length < 6) return { ok: false, error: "Password must be at least 6 characters." };
+
+    if (!isSupabaseConfigured || !supabase) {
+      return { ok: false, error: "Supabase is not configured. Password setup is unavailable." };
+    }
+
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: cleanPass });
+      if (error) return { ok: false, error: error.message };
+      return { ok: true };
     } finally {
       setLoading(false);
     }
@@ -374,7 +432,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         user, isGuest, isAdmin: user?.role === "admin",
         personalTodos, loading, captainClubs,
-        sendOtp, verifyOtp, logout, enterAsGuest,
+        login, sendOtp, verifyOtp, setPassword, logout, enterAsGuest,
         addPersonalTodo, togglePersonalTodo, deletePersonalTodo,
       }}
     >

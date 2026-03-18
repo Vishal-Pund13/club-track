@@ -1,56 +1,30 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { sendOtp, verifyOtp, enterAsGuest } = useAuth();
+  const { login, enterAsGuest } = useAuth();
 
   const [mobile, setMobile] = useState("");
-  const [otp, setOtp] = useState("");
-  const [step, setStep] = useState<"mobile" | "otp">("mobile");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [resendIn, setResendIn] = useState(0);
 
-  useEffect(() => {
-    if (step !== "otp") return;
-    if (resendIn <= 0) return;
-    const t = setInterval(() => setResendIn((s) => Math.max(0, s - 1)), 1000);
-    return () => clearInterval(t);
-  }, [step, resendIn]);
-
-  const handleSendOtp = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
     try {
-      const result = await sendOtp(mobile);
-      if (!result.ok) return setError(result.error || "Failed to send OTP.");
-      setStep("otp");
-      setResendIn(30);
-    } catch (err) {
-      console.error(err);
-      setError("A tactical error occurred.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleVerifyOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
-    try {
-      const result = await verifyOtp(mobile, otp);
-      if (!result.ok) return setError(result.error || "OTP verification failed.");
+      const result = await login(mobile, password);
+      if (!result.ok) return setError(result.error || "Login failed.");
       router.push("/ops");
     } catch (err) {
       console.error(err);
-      setError("Command link failed.");
+      setError("A tactical error occurred.");
     } finally {
       setLoading(false);
     }
@@ -151,9 +125,8 @@ export default function LoginPage() {
           )}
         </AnimatePresence>
 
-        {/* OTP login form */}
-        {step === "mobile" && (
-          <form onSubmit={handleSendOtp} style={{ display: "flex", flexDirection: "column", gap: "1.1rem" }}>
+        {/* Password login form */}
+        <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: "1.1rem" }}>
             <div>
               <label style={labelStyle}>Mobile Number</label>
               <input
@@ -167,34 +140,13 @@ export default function LoginPage() {
                 onBlur={(e) => (e.target.style.borderColor = "rgba(78,95,59,0.3)")}
               />
             </div>
-            <button
-              type="submit"
-              disabled={loading}
-              style={{ background: "#4E5F3B", color: "#e8eddf", border: "none", borderRadius: 8, padding: "0.85rem", fontFamily: "'Inter', sans-serif", fontSize: "0.95rem", fontWeight: 700, cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.7 : 1, transition: "all 0.2s", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}
-            >
-              {loading ? "Sending OTP…" : "📲 Send OTP"}
-            </button>
-
-            <div style={{ textAlign: "center", fontSize: "0.82rem", color: "rgba(160,180,130,0.5)" }}>
-              Not enlisted yet?{" "}
-              <button type="button" onClick={() => router.push("/enlist")} style={{ background: "none", border: "none", color: "#4E5F3B", fontWeight: 600, cursor: "pointer", fontSize: "0.82rem", padding: 0 }}>
-                Enlist Now →
-              </button>
-            </div>
-          </form>
-        )}
-
-        {step === "otp" && (
-          <form onSubmit={handleVerifyOtp} style={{ display: "flex", flexDirection: "column", gap: "1.1rem" }}>
             <div>
-              <label style={labelStyle}>OTP</label>
+              <label style={labelStyle}>Password</label>
               <input
-                inputMode="numeric"
-                pattern="\d{6}"
-                maxLength={6}
-                placeholder="Enter 6-digit code"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                type="password"
+                placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 required
                 style={inputStyle}
                 onFocus={(e) => (e.target.style.borderColor = "#4E5F3B")}
@@ -204,47 +156,18 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              style={{ background: "#4E5F3B", color: "#e8eddf", border: "none", borderRadius: 8, padding: "0.85rem", fontFamily: "'Inter', sans-serif", fontSize: "0.95rem", fontWeight: 700, cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.7 : 1, transition: "all 0.2s" }}
+              style={{ background: "#4E5F3B", color: "#e8eddf", border: "none", borderRadius: 8, padding: "0.85rem", fontFamily: "'Inter', sans-serif", fontSize: "0.95rem", fontWeight: 700, cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.7 : 1, transition: "all 0.2s", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}
             >
-              {loading ? "Verifying…" : "✅ Verify & Enter"}
+              {loading ? "Authenticating…" : "🎯 Authenticate & Deploy"}
             </button>
 
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.78rem", color: "rgba(160,180,130,0.55)" }}>
-              <button
-                type="button"
-                onClick={() => { setStep("mobile"); setOtp(""); setError(""); }}
-                style={{ background: "none", border: "none", color: "rgba(160,180,130,0.55)", cursor: "pointer", padding: 0 }}
-              >
-                ← Change mobile
-              </button>
-              <button
-                type="button"
-                onClick={async () => {
-                  setError("");
-                  setLoading(true);
-                  try {
-                    const r = await sendOtp(mobile);
-                    if (!r.ok) setError(r.error || "Failed to resend OTP.");
-                    else setResendIn(30);
-                  } finally {
-                    setLoading(false);
-                  }
-                }}
-                disabled={loading || resendIn > 0}
-                style={{
-                  background: "none",
-                  border: "none",
-                  color: resendIn > 0 ? "rgba(160,180,130,0.35)" : "#4E5F3B",
-                  fontWeight: 700,
-                  cursor: loading || resendIn > 0 ? "not-allowed" : "pointer",
-                  padding: 0,
-                }}
-              >
-                Resend OTP{resendIn > 0 ? ` (${resendIn}s)` : ""}
+            <div style={{ textAlign: "center", fontSize: "0.82rem", color: "rgba(160,180,130,0.5)" }}>
+              Not enlisted yet?{" "}
+              <button type="button" onClick={() => router.push("/enlist")} style={{ background: "none", border: "none", color: "#4E5F3B", fontWeight: 600, cursor: "pointer", fontSize: "0.82rem", padding: 0 }}>
+                Enlist Now →
               </button>
             </div>
           </form>
-        )}
 
         {/* Divider */}
         <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", margin: "1.5rem 0" }}>

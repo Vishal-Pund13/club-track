@@ -11,7 +11,7 @@ const ASPIRANT_TYPES: AspirantType[] = [
 
 export default function EnlistPage() {
   const router = useRouter();
-  const { sendOtp, verifyOtp } = useAuth();
+  const { sendOtp, verifyOtp, setPassword } = useAuth();
 
   const [form, setForm] = useState({
     name: "",
@@ -20,7 +20,9 @@ export default function EnlistPage() {
     aspirantType: "" as AspirantType | "",
   });
   const [otp, setOtp] = useState("");
-  const [step, setStep] = useState<"form" | "otp">("form");
+  const [password, setPasswordValue] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [step, setStep] = useState<"form" | "otp" | "password">("form");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -64,14 +66,26 @@ export default function EnlistPage() {
         city: form.city,
         aspirantType: form.aspirantType as AspirantType,
       });
-      if (result.ok) {
-        router.push("/ops");
-      } else {
-        setError(result.error || "OTP verification failed. Try again.");
-      }
+      if (!result.ok) return setError(result.error || "OTP verification failed. Try again.");
+      setStep("password");
     } catch (err) {
       console.error(err);
       setError("A tactical error occurred. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    if (password.length < 6) return setError("Password must be at least 6 characters.");
+    if (password !== confirmPassword) return setError("Passwords do not match. Soldier, stay sharp!");
+    setLoading(true);
+    try {
+      const r = await setPassword(password);
+      if (!r.ok) return setError(r.error || "Failed to set password.");
+      router.push("/ops");
     } finally {
       setLoading(false);
     }
@@ -288,6 +302,45 @@ export default function EnlistPage() {
                 Edit details →
               </button>
             </div>
+          </form>
+        )}
+
+        {step === "password" && (
+          <form onSubmit={handleSetPassword} style={{ display: "flex", flexDirection: "column", gap: "1.1rem" }}>
+            <div>
+              <label style={labelStyle}>Set Password</label>
+              <input
+                type="password"
+                placeholder="Min 6 characters"
+                value={password}
+                onChange={(e) => setPasswordValue(e.target.value)}
+                required
+                style={inputStyle}
+                onFocus={(e) => (e.target.style.borderColor = "#4E5F3B")}
+                onBlur={(e) => (e.target.style.borderColor = "rgba(78,95,59,0.3)")}
+              />
+            </div>
+            <div>
+              <label style={labelStyle}>Confirm Password</label>
+              <input
+                type="password"
+                placeholder="Re-enter password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                style={inputStyle}
+                onFocus={(e) => (e.target.style.borderColor = "#4E5F3B")}
+                onBlur={(e) => (e.target.style.borderColor = "rgba(78,95,59,0.3)")}
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              style={{ background: "linear-gradient(135deg,#4E5F3B,#3a472c)", color: "#e8eddf", border: "none", borderRadius: 8, padding: "0.9rem", fontFamily: "'Inter', sans-serif", fontSize: "0.95rem", fontWeight: 700, cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.7 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem", boxShadow: "0 0 20px rgba(78,95,59,0.3)", transition: "all 0.2s" }}
+            >
+              {loading ? "Saving…" : "🔒 Save Password & Enter"}
+            </button>
           </form>
         )}
 

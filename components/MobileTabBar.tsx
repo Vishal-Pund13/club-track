@@ -15,6 +15,7 @@ export default function MobileTabBar() {
     const tabs = [
         { href: "/ops", icon: Crosshair, label: "Ops" },
         { href: "/leaderboard", icon: Trophy, label: "Rankings" },
+        ...(user ? [{ href: "/profile", icon: Settings, label: "Profile" }] : []),
         ...(user?.role === "admin" ? [{ href: "/admin", icon: Settings, label: "Armory" }] : []),
     ];
 

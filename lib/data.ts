@@ -3,6 +3,7 @@
 
 export interface User {
   id: string;
+  username?: string;
   name: string;
   initials: string;
   ssb_board: string;

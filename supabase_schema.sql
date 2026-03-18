@@ -34,6 +34,7 @@ CREATE TABLE public.clubs (
 -- ─── 2. PROFILES (extends Supabase auth.users) ─────────────────────────
 CREATE TABLE public.profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  username TEXT UNIQUE,
   name TEXT NOT NULL,
   initials TEXT NOT NULL,
   mobile TEXT UNIQUE,

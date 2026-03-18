@@ -5,7 +5,7 @@ import { useAuth } from "@/lib/auth";
 import { Club } from "@/lib/data";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Crosshair, Trophy, Settings, LogOut, Shield, Moon, Sun } from "lucide-react";
+import { Crosshair, Trophy, Settings, LogOut, Shield, Moon, Sun, User } from "lucide-react";
 
 function ClubItem({ club }: { club: Club }) {
     const { state, dispatch } = useApp();
@@ -88,6 +88,12 @@ export default function Sidebar() {
                     <Trophy size={14} />
                     Rankings
                 </Link>
+                {user && (
+                    <Link href="/profile" className={`nav-link ${pathname === "/profile" ? "active-nav" : ""}`} style={{ display: "flex", marginBottom: "0.15rem" }}>
+                        <User size={14} />
+                        Profile
+                    </Link>
+                )}
                 {user?.role === "admin" && (
                     <Link href="/admin" className={`nav-link ${pathname === "/admin" ? "active-nav" : ""}`} style={{ display: "flex" }}>
                         <Shield size={14} />
