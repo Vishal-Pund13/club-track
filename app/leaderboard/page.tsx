@@ -1,8 +1,8 @@
 "use client";
 
 import { useApp } from "@/lib/store";
-import { USER_CLUB_POINTS, USER_WEEKLY_POINTS, USER_TODAY_POINTS, CLUBS } from "@/lib/data";
-import { useState } from "react";
+import { CLUBS, TODAY } from "@/lib/data";
+import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Sidebar from "@/components/Sidebar";
 import MobileTabBar from "@/components/MobileTabBar";
@@ -11,19 +11,45 @@ import { ArrowLeft } from "lucide-react";
 
 type Filter = "alltime" | "week" | "today";
 
-function getScore(userId: string, filter: Filter, totalPts: number): number {
-    if (filter === "alltime") return totalPts;
-    if (filter === "week") return USER_WEEKLY_POINTS[userId] ?? 0;
-    return USER_TODAY_POINTS[userId] ?? 0;
-}
-
 export default function LeaderboardPage() {
     const { state } = useApp();
     const [filter, setFilter] = useState<Filter>("alltime");
 
-    const sorted = [...state.users]
-        .map((u) => ({ ...u, score: getScore(u.id, filter, u.total_pts) }))
-        .sort((a, b) => b.score - a.score);
+    // Dynamic Score Computation
+    const scores = useMemo(() => {
+        const today = new Date(TODAY).getTime();
+        const startOfWeek = new Date(TODAY);
+        startOfWeek.setDate(startOfWeek.getDate() - 7);
+        const sevenDaysAgo = startOfWeek.getTime();
+
+        const data: Record<string, { today: number; week: number }> = {};
+        state.users.forEach(u => { data[u.id] = { today: 0, week: 0 }; });
+
+        state.completions.forEach(c => {
+            const task = state.tasks.find(t => t.id === c.task_id);
+            if (!task) return;
+            const cDate = new Date(c.completed_at).getTime();
+            
+            if (c.completed_at.startsWith(TODAY)) {
+                data[c.user_id].today += task.pts;
+            }
+            if (cDate >= sevenDaysAgo) {
+                data[c.user_id].week += task.pts;
+            }
+        });
+        return data;
+    }, [state.completions, state.tasks, state.users]);
+
+    const sorted = useMemo(() => {
+        return [...state.users]
+            .map((u) => {
+                let score = u.total_pts;
+                if (filter === "today") score = scores[u.id]?.today ?? 0;
+                if (filter === "week") score = scores[u.id]?.week ?? 0;
+                return { ...u, score };
+            })
+            .sort((a, b) => b.score - a.score);
+    }, [state.users, filter, scores]);
 
     const maxScore = sorted[0]?.score ?? 1;
 
@@ -210,7 +236,7 @@ export default function LeaderboardPage() {
 
                                         {/* Per-club pts */}
                                         {CLUBS.map((c) => {
-                                            const pts = USER_CLUB_POINTS[u.id]?.[c.id] ?? 0;
+                                            const pts = state.userClubPoints[u.id]?.[c.id] ?? 0;
                                             return (
                                                 <span
                                                     key={c.id}

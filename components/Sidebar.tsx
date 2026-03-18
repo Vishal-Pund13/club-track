@@ -36,7 +36,7 @@ function ClubItem({ club }: { club: Club }) {
 
 export default function Sidebar() {
     const { state, dispatch } = useApp();
-    const { user, isGuest, logout } = useAuth();
+    const { user, isGuest, logout, captainClubs } = useAuth();
     const pathname = usePathname();
     const router = useRouter();
 
@@ -118,8 +118,15 @@ export default function Sidebar() {
                         {displayInitials}
                     </div>
                     <div style={{ overflow: "hidden", flex: 1 }}>
-                        <div style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                            {displayName}
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                            <div style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                {displayName}
+                            </div>
+                            {captainClubs.length > 0 && (
+                                <span title="Squad Captain" style={{ fontSize: "0.6rem", background: "rgba(78,95,59,0.15)", color: "var(--amber)", border: "0.5px solid rgba(78,95,59,0.3)", borderRadius: 4, padding: "0.1rem 0.3rem", fontWeight: 700, display: "flex", alignItems: "center", gap: "2px" }}>
+                                    <Shield size={8} /> CAPTAIN
+                                </span>
+                            )}
                         </div>
                         <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>{displaySub}</div>
                     </div>

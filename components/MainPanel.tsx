@@ -9,6 +9,8 @@ import { Club, Task, CLUBS, TODAY } from "@/lib/data";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, Plus, Trash2, Lock, Clock, X, ExternalLink, ShieldCheck, Shield } from "lucide-react";
 import { useMemo, useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 // ─── Proof Submission Modal ────────────────────────────────────────────────────
 
@@ -459,7 +461,8 @@ type PanelTab = "missions" | "personal";
 
 export default function MainPanel() {
     const { state, dispatch } = useApp();
-    const { user, isGuest, personalTodos, addPersonalTodo, togglePersonalTodo, deletePersonalTodo } = useAuth();
+    const { user, isGuest, personalTodos, addPersonalTodo, togglePersonalTodo, deletePersonalTodo, captainClubs } = useAuth();
+    const pathname = usePathname();
     const currentUser = useCurrentUser();
     const [selectedDate, setSelectedDate] = useState(TODAY);
     const [activeTab, setActiveTab] = useState<PanelTab>("missions");
@@ -503,6 +506,13 @@ export default function MainPanel() {
         [state.completions, userId, state.tasks, selectedDate]
     );
 
+    const pendingVerifsForCaptain = useMemo(() => 
+        state.verifications.filter(v => 
+            v.status === "pending" && (captainClubs || []).includes(state.tasks.find(t => t.id === v.task_id)?.club_id || "")
+        ),
+        [state.verifications, state.tasks, captainClubs]
+    );
+
     const streak = currentUser?.streak ?? 0;
     const dateLabel = new Date(selectedDate).toLocaleDateString("en-IN", { weekday: "long", month: "long", day: "numeric" });
 
@@ -515,6 +525,20 @@ export default function MainPanel() {
 
     return (
         <main className="main-panel">
+            {/* Captain Alert */}
+            {pendingVerifsForCaptain.length > 0 && pathname === "/ops" && (
+                <div style={{ background: "rgba(239,159,39,0.08)", border: "1px solid rgba(239,159,39,0.3)", borderRadius: 12, padding: "0.85rem 1.1rem", marginBottom: "1.25rem", display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                    <Shield size={18} style={{ color: "var(--amber)", flexShrink: 0 }} />
+                    <div style={{ flex: 1, fontSize: "0.82rem", color: "var(--text-sub)", fontWeight: 500 }}>
+                        <span style={{ fontWeight: 700, color: "var(--amber)" }}>ATTENTION CAPTAIN:</span>
+                        {" "}You have {pendingVerifsForCaptain.length} pending proof submission{pendingVerifsForCaptain.length > 1 ? "s" : ""} to review.
+                    </div>
+                    <Link href="/admin" className="btn-amber" style={{ padding: "0.4rem 0.75rem", fontSize: "0.72rem", textDecoration: "none", borderRadius: 6 }}>
+                        Verify Now →
+                    </Link>
+                </div>
+            )}
+
             {/* Heading */}
             <div style={{ marginBottom: "1.1rem" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>

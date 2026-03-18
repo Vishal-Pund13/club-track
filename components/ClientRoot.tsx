@@ -9,7 +9,7 @@ const PUBLIC_PATHS = ["/", "/login", "/enlist"];
 
 export default function ClientRoot({ children }: { children: React.ReactNode }) {
     const { state, dispatch } = useApp();
-    const { user, isGuest, loading } = useAuth();
+    const { user, isGuest, loading, captainClubs } = useAuth();
     const pathname = usePathname();
     const router = useRouter();
 
@@ -41,12 +41,13 @@ export default function ClientRoot({ children }: { children: React.ReactNode }) 
             return;
         }
 
-        // Admin guard — non-admins trying to access /admin
-        if (pathname.startsWith("/admin") && user?.role !== "admin") {
-            console.log("[Gate] Admin restricted area. User role:", user?.role);
+        // Admin/Captain guard — non-admins and non-captains trying to access /admin
+        const isCaptain = (captainClubs || []).length > 0;
+        if (pathname.startsWith("/admin") && user?.role !== "admin" && !isCaptain) {
+            console.log("[Gate] restricted area. User role:", user?.role, "IsCaptain:", isCaptain);
             router.push("/ops");
         }
-    }, [pathname, user, isGuest, loading, router]);
+    }, [pathname, user, isGuest, loading, router, captainClubs]);
 
     // Show nothing or a tactical loader while checking credentials
     if (loading && !PUBLIC_PATHS.includes(pathname)) {

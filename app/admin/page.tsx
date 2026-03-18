@@ -9,7 +9,12 @@ import Sidebar from "@/components/Sidebar";
 import MobileTabBar from "@/components/MobileTabBar";
 import { Plus, ChevronDown, ChevronUp, Check, X, Clock, ExternalLink, Shield } from "lucide-react";
 
-type AdminTab = "overview" | "missions" | "deploy" | "roster" | "verify";
+type AdminTab = "overview" | "missions" | "deploy" | "roster" | "verify" | "captains";
+
+interface CaptainAssignment {
+    club_id: string;
+    profile_id: string;
+}
 
 interface NewMissionForm {
     club_id: string;
@@ -153,6 +158,7 @@ export default function AdminPage() {
     const [submitted, setSubmitted] = useState(false);
     const [expandedMission, setExpandedMission] = useState<string | null>(null);
     const [enrolledCount, setEnrolledCount] = useState(0);
+    const [captainAssignments, setCaptainAssignments] = useState<CaptainAssignment[]>([]);
 
     useEffect(() => {
         try {
@@ -160,6 +166,40 @@ export default function AdminPage() {
             setEnrolledCount(users.length);
         } catch { /* ignore */ }
     }, []);
+
+    // Set default tab for Captains
+    useEffect(() => {
+        if (user && user.role !== "admin" && (authCaptainClubs || []).length > 0) {
+            setActiveTab("verify");
+        }
+    }, [user, authCaptainClubs]);
+
+    const fetchCaptainAssignments = async () => {
+        const { supabase } = await import("@/lib/supabase");
+        if (!supabase) return;
+        const { data, error } = await supabase.from("captain_assignments").select("*");
+        if (!error && data) setCaptainAssignments(data);
+    };
+
+    useEffect(() => {
+        if (user?.role === "admin") {
+            fetchCaptainAssignments();
+        }
+    }, [user]);
+
+    async function assignCaptain(clubId: string, profileId: string) {
+        const { supabase } = await import("@/lib/supabase");
+        if (!supabase) return;
+        const { error } = await supabase.from("captain_assignments").upsert({ club_id: clubId, profile_id: profileId }, { onConflict: "club_id,profile_id" });
+        if (!error) fetchCaptainAssignments();
+    }
+
+    async function removeCaptain(clubId: string, profileId: string) {
+        const { supabase } = await import("@/lib/supabase");
+        if (!supabase) return;
+        const { error } = await supabase.from("captain_assignments").delete().match({ club_id: clubId, profile_id: profileId });
+        if (!error) fetchCaptainAssignments();
+    }
 
     // All club IDs — admins see everything; captains only see their clubs
     const captainClubs = user?.role === "admin"
@@ -213,13 +253,22 @@ export default function AdminPage() {
 
     const dateLabel = new Date(TODAY).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 
-    const tabs: { id: AdminTab; label: string; icon: string; badge?: number }[] = [
-        { id: "overview", label: "Overview", icon: "📊" },
-        { id: "missions", label: "Missions", icon: "🎖" },
-        { id: "deploy", label: "Deploy", icon: "🎯" },
-        { id: "roster", label: "Roster", icon: "🪖" },
-        { id: "verify", label: "Verify", icon: "🛡", badge: pendingVerifs.length },
-    ];
+    let tabs: { id: AdminTab; label: string; icon: string; badge?: number }[] = [];
+
+    if (user?.role === "admin") {
+        tabs = [
+            { id: "overview", label: "Overview", icon: "📊" },
+            { id: "missions", label: "Missions", icon: "🎖" },
+            { id: "deploy", label: "Deploy", icon: "🎯" },
+            { id: "roster", label: "Roster", icon: "🪖" },
+            { id: "verify", label: "Verify", icon: "🛡", badge: pendingVerifs.length },
+            { id: "captains", label: "Captains", icon: "🎖️" },
+        ];
+    } else if ((authCaptainClubs || []).length > 0) {
+        tabs = [
+            { id: "verify", label: "Verify", icon: "🛡", badge: pendingVerifs.length },
+        ];
+    }
 
     async function handleReview(id: string, status: VerifStatus, note: string) {
         if (!user) return;
@@ -583,6 +632,80 @@ export default function AdminPage() {
                                         </div>
                                     );
                                 })}
+                            </div>
+                        </motion.div>
+                    )}
+
+                    {/* ════════════════ CAPTAINS ════════════════════════════════ */}
+                    {activeTab === "captains" && user?.role === "admin" && (
+                        <motion.div key="captains" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }} style={{ maxWidth: 820 }}>
+                            <div style={{ padding: "1.25rem", background: "var(--surface)", border: "0.5px solid var(--border)", borderRadius: 12 }}>
+                                <div style={{ marginBottom: "1.5rem" }}>
+                                    <h2 style={{ fontSize: "1rem", margin: "0 0 0.3rem" }}>🎖️ Captain Management</h2>
+                                    <p style={{ fontSize: "0.78rem", color: "var(--text-muted)", margin: 0 }}>
+                                        Assign Captains to specific squads. Captains can only verify proof submissions for their assigned squads.
+                                    </p>
+                                </div>
+
+                                <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+                                    {CLUBS.filter(c => c.id !== "all").map(club => {
+                                        const assignment = captainAssignments.find(a => a.club_id === club.id);
+                                        const currentCaptain = assignment ? state.users.find(u => u.id === assignment.profile_id) : null;
+                                        const potentialCaptains = state.users.filter(u => u.role !== "admin" && u.id !== currentCaptain?.id);
+
+                                        return (
+                                            <div key={club.id} style={{ padding: "1.1rem", background: "var(--surface-2)", borderRadius: 10, border: "0.5px solid var(--border)" }}>
+                                                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "1rem" }}>
+                                                    <span style={{ fontSize: "1.2rem" }}>{club.icon}</span>
+                                                    <span style={{ fontWeight: 600, fontSize: "0.95rem" }}>{club.name} Squad</span>
+                                                </div>
+
+                                                {currentCaptain ? (
+                                                    <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem", background: "var(--surface)", border: "0.5px solid var(--border)", borderRadius: 8 }}>
+                                                        <div className="avatar" style={{ width: 28, height: 28, fontSize: "0.6rem" }}>{currentCaptain.initials}</div>
+                                                        <div style={{ flex: 1 }}>
+                                                            <div style={{ fontSize: "0.85rem", fontWeight: 600 }}>{currentCaptain.name}</div>
+                                                            <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>Current Captain</div>
+                                                        </div>
+                                                        <button
+                                                            onClick={() => removeCaptain(club.id, currentCaptain.id)}
+                                                            className="btn-neutral"
+                                                            style={{ padding: "0.35rem 0.65rem", fontSize: "0.72rem", color: "#f87171" }}
+                                                        >
+                                                            <X size={12} style={{ display: "inline", marginRight: 4 }} /> Remove
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <div style={{ padding: "0.75rem", background: "rgba(78,95,59,0.05)", border: "1px dashed rgba(78,95,59,0.2)", borderRadius: 8, textAlign: "center", fontSize: "0.78rem", color: "var(--text-muted)", marginBottom: "0.75rem" }}>
+                                                        No captain assigned to this squad.
+                                                    </div>
+                                                )}
+
+                                                <div style={{ marginTop: "1rem" }}>
+                                                    <div style={{ fontSize: "0.67rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--text-muted)", marginBottom: "0.4rem" }}>
+                                                        Assign New Captain
+                                                    </div>
+                                                    <div style={{ display: "flex", gap: "0.5rem" }}>
+                                                        <select
+                                                            className="input-field"
+                                                            style={{ flex: 1, fontSize: "0.8rem", background: "var(--surface)" }}
+                                                            onChange={(e) => {
+                                                                const val = e.target.value;
+                                                                if (val) assignCaptain(club.id, val);
+                                                            }}
+                                                            value=""
+                                                        >
+                                                            <option value="" disabled>Select an aspirant...</option>
+                                                            {potentialCaptains.map(u => (
+                                                                <option key={u.id} value={u.id}>{u.name} ({u.city})</option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
                             </div>
                         </motion.div>
                     )}

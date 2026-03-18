@@ -8,6 +8,9 @@ export interface User {
   ssb_board: string;
   streak: number;
   total_pts: number;
+  role: "aspirant" | "admin";
+  city: string;
+  aspirantType: string;
   isCurrentUser?: boolean;
 }
 
@@ -91,6 +94,9 @@ export const USERS: User[] = [
     ssb_board: "Allahabad",
     streak: 14,
     total_pts: 1240,
+    role: "aspirant",
+    city: "Lucknow",
+    aspirantType: "CDS",
     isCurrentUser: true,
   },
   {
@@ -100,6 +106,9 @@ export const USERS: User[] = [
     ssb_board: "Bangalore",
     streak: 21,
     total_pts: 1580,
+    role: "aspirant",
+    city: "Pune",
+    aspirantType: "NDA",
   },
   {
     id: "u3",
@@ -108,6 +117,9 @@ export const USERS: User[] = [
     ssb_board: "Bhopal",
     streak: 7,
     total_pts: 980,
+    role: "aspirant",
+    city: "Delhi",
+    aspirantType: "TGC",
   },
   {
     id: "u4",
@@ -116,6 +128,9 @@ export const USERS: User[] = [
     ssb_board: "Allahabad",
     streak: 18,
     total_pts: 1420,
+    role: "aspirant",
+    city: "Mumbai",
+    aspirantType: "SSC Tech",
   },
   {
     id: "u5",
@@ -124,6 +139,9 @@ export const USERS: User[] = [
     ssb_board: "Chennai",
     streak: 3,
     total_pts: 720,
+    role: "aspirant",
+    city: "Jaipur",
+    aspirantType: "NDA",
   },
   {
     id: "u6",
@@ -132,6 +150,9 @@ export const USERS: User[] = [
     ssb_board: "Kolkata",
     streak: 9,
     total_pts: 1100,
+    role: "aspirant",
+    city: "Nagpur",
+    aspirantType: "CDS",
   },
   {
     id: "u7",
@@ -140,6 +161,9 @@ export const USERS: User[] = [
     ssb_board: "Jalandhar",
     streak: 25,
     total_pts: 1750,
+    role: "aspirant",
+    city: "Chandigarh",
+    aspirantType: "NCC Special Entry",
   },
 ];
 
