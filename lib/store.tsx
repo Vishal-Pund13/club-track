@@ -252,10 +252,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
                 const users: User[] = (usersData ?? USERS).map((p: {
                     id: string; name: string; initials: string; ssb_board: string | null;
                     streak: number; total_pts?: number;
+                    role?: string; city?: string | null; aspirant_type?: string | null;
                 }) => ({
                     id: p.id, name: p.name, initials: p.initials,
                     ssb_board: p.ssb_board ?? "Unknown",
                     streak: p.streak, total_pts: 0,
+                    role: (p.role === "admin" ? "admin" : "aspirant") as "admin" | "aspirant",
+                    city: p.city ?? "",
+                    aspirantType: p.aspirant_type ?? "Other",
                 }));
 
                 dispatch({
