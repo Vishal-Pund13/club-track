@@ -5,7 +5,7 @@ import { useAuth } from "@/lib/auth";
 import { Club } from "@/lib/data";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Crosshair, Trophy, Settings, LogOut, Shield } from "lucide-react";
+import { Crosshair, Trophy, Settings, LogOut, Shield, Moon, Sun } from "lucide-react";
 
 function ClubItem({ club }: { club: Club }) {
     const { state, dispatch } = useApp();
@@ -123,6 +123,13 @@ export default function Sidebar() {
                         </div>
                         <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>{displaySub}</div>
                     </div>
+                    <button
+                        onClick={() => dispatch({ type: "TOGGLE_DARK_MODE" })}
+                        title={state.darkMode ? "Switch to light mode" : "Switch to dark mode"}
+                        style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: "0.25rem", borderRadius: 4, display: "flex", alignItems: "center" }}
+                    >
+                        {state.darkMode ? <Sun size={14} /> : <Moon size={14} />}
+                    </button>
                     <button
                         onClick={handleLogout}
                         title="Stand Down (Logout)"

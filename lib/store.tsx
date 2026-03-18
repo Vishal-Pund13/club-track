@@ -314,20 +314,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
         dispatch({ type: "SUBMIT_VERIFICATION", verification: optimisticVerif });
 
         if (isSupabaseConfigured && supabase) {
-            console.log(`[Sync] Inserting verification for task ${taskId}...`);
+            console.log(`[Sync] Tactical Re-submission/Insert for task ${taskId}...`);
             const { data, error } = await supabase
                 .from("task_verifications")
-                .insert({
+                .upsert({
                     task_id: taskId,
                     user_id: userId,
                     proof_text: proofText,
                     status: task.requires_proof ? "pending" : "approved",
+                    reviewed_by: null,
+                    reviewed_at: null,
+                    review_note: null,
+                    submitted_at: new Date().toISOString(),
+                }, { 
+                    onConflict: "task_id,user_id" 
                 })
                 .select()
                 .single();
 
             if (error) {
-                console.error("[Sync] Verification insert failed:", error.message);
+                console.error("[Sync] Verification upsert failed:", error.message);
             } else if (data) {
                 // Update the local fake ID with the real DB UUID
                 dispatch({ type: "SUBMIT_VERIFICATION", verification: { ...optimisticVerif, id: data.id } });

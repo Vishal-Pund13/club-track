@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Crosshair, Trophy, Settings, LogOut } from "lucide-react";
+import { Crosshair, Trophy, Settings, LogOut, Moon, Sun } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useApp } from "@/lib/store";
 
@@ -81,6 +81,15 @@ export default function MobileTabBar() {
                         </Link>
                     );
                 })}
+
+                {/* Theme toggle */}
+                <button
+                    onClick={() => dispatch({ type: "TOGGLE_DARK_MODE" })}
+                    style={iconStyle(false)}
+                >
+                    {state.darkMode ? <Sun size={20} /> : <Moon size={20} />}
+                    {state.darkMode ? "Light" : "Dark"}
+                </button>
 
                 {/* Logout */}
                 <button
