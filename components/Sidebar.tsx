@@ -94,7 +94,7 @@ export default function Sidebar() {
                         Profile
                     </Link>
                 )}
-                {user?.role === "admin" && (
+                {(user?.role === "admin" || (captainClubs && captainClubs.length > 0)) && (
                     <Link href="/admin" className={`nav-link ${pathname === "/admin" ? "active-nav" : ""}`} style={{ display: "flex" }}>
                         <Shield size={14} />
                         Armory

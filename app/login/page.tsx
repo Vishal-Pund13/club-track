@@ -13,6 +13,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [mode, setMode] = useState<"aspirant" | "admin">("aspirant");
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -110,6 +111,31 @@ export default function LoginPage() {
             Authenticate your identity to access Command Center
           </p>
         </div>
+        {/* Tabs */}
+        <div style={{ display: "flex", background: "rgba(0,0,0,0.2)", borderRadius: 10, padding: 4, marginBottom: "2rem" }}>
+          <button
+            onClick={() => setMode("aspirant")}
+            style={{
+              flex: 1, padding: "0.6rem", border: "none", borderRadius: 8, fontSize: "0.75rem", fontWeight: 700, fontFamily: "'JetBrains Mono', monospace",
+              background: mode === "aspirant" ? "#4E5F3B" : "transparent",
+              color: mode === "aspirant" ? "#e8eddf" : "rgba(78,95,59,0.6)",
+              cursor: "pointer", transition: "all 0.2s"
+            }}
+          >
+            🪖 ASPIRANT
+          </button>
+          <button
+            onClick={() => setMode("admin")}
+            style={{
+              flex: 1, padding: "0.6rem", border: "none", borderRadius: 8, fontSize: "0.75rem", fontWeight: 700, fontFamily: "'JetBrains Mono', monospace",
+              background: mode === "admin" ? "#4E5F3B" : "transparent",
+              color: mode === "admin" ? "#e8eddf" : "rgba(78,95,59,0.6)",
+              cursor: "pointer", transition: "all 0.2s"
+            }}
+          >
+            ⚔️ COMMANDER
+          </button>
+        </div>
 
         {/* Error */}
         <AnimatePresence>
@@ -128,10 +154,10 @@ export default function LoginPage() {
         {/* Password login form */}
         <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: "1.1rem" }}>
             <div>
-              <label style={labelStyle}>Mobile Number</label>
+              <label style={labelStyle}>{mode === "admin" ? "Admin Identifier" : "Mobile Number"}</label>
               <input
-                type="tel"
-                placeholder="10-digit mobile number"
+                type="text"
+                placeholder={mode === "admin" ? "Enter admin email" : "10-digit mobile number"}
                 value={mobile}
                 onChange={(e) => setMobile(e.target.value)}
                 required

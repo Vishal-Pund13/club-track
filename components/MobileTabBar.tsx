@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Crosshair, Trophy, Settings, LogOut, Moon, Sun } from "lucide-react";
+import { Crosshair, Trophy, Settings, LogOut, Moon, Sun, Shield } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useApp } from "@/lib/store";
 
 export default function MobileTabBar() {
     const pathname = usePathname();
-    const { user, logout } = useAuth();
+    const { user, logout, captainClubs } = useAuth();
     const { state, dispatch } = useApp();
     const router = useRouter();
 
@@ -16,7 +16,7 @@ export default function MobileTabBar() {
         { href: "/ops", icon: Crosshair, label: "Ops" },
         { href: "/leaderboard", icon: Trophy, label: "Rankings" },
         ...(user ? [{ href: "/profile", icon: Settings, label: "Profile" }] : []),
-        ...(user?.role === "admin" ? [{ href: "/admin", icon: Settings, label: "Armory" }] : []),
+        ...((user?.role === "admin" || (captainClubs && captainClubs.length > 0)) ? [{ href: "/admin", icon: Shield, label: "Armory" }] : []),
     ];
 
     const iconStyle = (active: boolean): React.CSSProperties => ({

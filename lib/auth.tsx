@@ -57,7 +57,7 @@ interface AuthState {
 }
 
 interface AuthContextValue extends AuthState {
-  login: (mobile: string, password: string) => Promise<{ ok: boolean; error?: string }>;
+  login: (mobileOrEmail: string, password: string) => Promise<{ ok: boolean; error?: string }>;
   sendOtp: (
     mobile: string,
     options?: {
@@ -252,24 +252,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // ── Phone OTP Auth (Supabase) ────────────────────────────────────────────────
 
   // Login with mobile + password (email is derived internally)
-  const login: AuthContextValue["login"] = async (mobile, password) => {
-    const cleanMobile = mobile.trim();
+  const login: AuthContextValue["login"] = async (mobileOrEmail, password) => {
+    const input = mobileOrEmail.trim();
     const cleanPass = password.trim();
-    const digits = cleanMobile.replace(/\D/g, "");
-    if (digits.length !== 10) return { ok: false, error: "Mobile number must be exactly 10 digits." };
-    if (cleanPass.length < 6) return { ok: false, error: "Password must be at least 6 characters." };
 
     if (!isSupabaseConfigured || !supabase) {
       return { ok: false, error: "Supabase is not configured. Password login is unavailable." };
     }
 
+    if (cleanPass.length < 6) return { ok: false, error: "Password must be at least 6 characters." };
+
     setLoading(true);
     try {
-      const email = mobileToInternalEmail(cleanMobile);
+      let email = input;
+      // If it's not an email, assume it's a mobile and convert to internal email
+      if (!input.includes("@")) {
+        const digits = input.replace(/\D/g, "");
+        if (digits.length !== 10) return { ok: false, error: "Enter a valid 10-digit mobile or your admin email." };
+        email = mobileToInternalEmail(digits);
+      }
+
       const { data, error } = await supabase.auth.signInWithPassword({ email, password: cleanPass });
       if (error) return { ok: false, error: error.message };
       if (data.user) await loadProfileAndTodos(data.user.id);
       return { ok: true };
+    } catch (err: any) {
+      console.error(err);
+      return { ok: false, error: err?.message || "A tactical error occurred during login." };
     } finally {
       setLoading(false);
     }
