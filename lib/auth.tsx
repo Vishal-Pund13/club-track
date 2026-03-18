@@ -266,7 +266,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) {
       console.error("[Auth] Login Error:", error.message);
       setLoading(false);
-      return { ok: false, error: "Invalid mobile number or password." };
+      return { ok: false, error: error.message };
     }
 
     if (data.user) {
@@ -306,7 +306,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) {
       console.error("[Admin] Supabase Login Error:", error.message);
       setLoading(false);
-      return { ok: false, error: "Invalid admin credentials." };
+      // Surface actual error to know if it's a rate limit vs actual credential mismatch
+      return { ok: false, error: error.message };
     }
 
     if (data.user) {
