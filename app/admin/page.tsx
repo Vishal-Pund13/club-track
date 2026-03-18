@@ -601,7 +601,7 @@ export default function AdminPage() {
 
                                 return (
                             <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginBottom: "1rem", fontWeight: 500 }}>
-                                showing {total === 0 ? 0 : start + 1} to {end} of {total} aspirants · sorted by approved pts
+                                showing {total === 0 ? 0 : start + 1} to {end} of {total} aspirants {"·"} sorted by approved pts
                             </div>
                             <div style={{ display: "grid", gridTemplateColumns: "2rem 2.25rem 1fr 5rem 5rem 5.5rem", gap: "0.5rem", alignItems: "center", padding: "0.25rem 1rem", marginBottom: "0.4rem" }}>
                                 <div /><div />
