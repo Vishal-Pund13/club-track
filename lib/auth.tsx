@@ -297,6 +297,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const initials = options?.name ? makeInitials(options.name) : undefined;
 
+    if (options?.mobile) {
+      const { data: existingMobile } = await supabase.from("profiles").select("id").eq("mobile", options.mobile).maybeSingle();
+      if (existingMobile) {
+        return { ok: false, error: "This mobile number is already registered to another account." };
+      }
+    }
+
     const { error } = await supabase.auth.signInWithOtp({
       email: cleanEmail,
       options: {
@@ -304,7 +311,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         data: {
           ...(options?.name ? { name: options.name } : {}),
           ...(initials ? { initials } : {}),
-          ...(options?.mobile ? { mobile: options.mobile } : {}),
+          // If no mobile is provided, pass a unique dummy string so the Postgres Trigger's `mobile` UNIQUE constraint doesn't crash on 'unknown'
+          mobile: options?.mobile || `unverified-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
           ...(options?.city ? { city: options.city } : {}),
           ...(options?.aspirantType ? { aspirant_type: options.aspirantType } : {}),
           role: options?.role ?? "aspirant",
@@ -344,7 +352,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             id: data.user.id,
             name: registrationData.name,
             initials,
-            mobile: registrationData.mobile,
+            // Only update mobile if they actually provided one, otherwise let the trigger's dummy string remain.
+            ...(registrationData.mobile ? { mobile: registrationData.mobile } : {}),
             city: registrationData.city,
             aspirant_type: registrationData.aspirantType,
             role: "aspirant",
