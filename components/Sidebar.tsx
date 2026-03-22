@@ -5,155 +5,170 @@ import { useAuth } from "@/lib/auth";
 import { Club } from "@/lib/data";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Crosshair, Trophy, Settings, LogOut, Shield, Moon, Sun, User } from "lucide-react";
+import {
+  LayoutDashboard, Trophy, Settings, LogOut, Shield, Moon, Sun, User, ChevronRight
+} from "lucide-react";
 
-function ClubItem({ club }: { club: Club }) {
-    const { state, dispatch } = useApp();
-    const isActive = state.activeClubId === club.id;
-    const pathname = usePathname();
-    const isDashboard = pathname === "/ops";
+function ClubChip({ club }: { club: Club }) {
+  const { state, dispatch } = useApp();
+  const isActive = state.activeClubId === club.id;
+  const pathname = usePathname();
+  const isDashboard = pathname === "/ops";
+  const pts = (() => {
+    const clubPts = state.userClubPoints[state.currentUserId] ?? {};
+    if (club.id === "all") return Object.values(clubPts).reduce((s, v) => s + v, 0);
+    return clubPts[club.id] ?? 0;
+  })();
 
-    const pts = (() => {
-        const clubPts = state.userClubPoints[state.currentUserId] ?? {};
-        if (club.id === "all") return Object.values(clubPts).reduce((s, v) => s + v, 0);
-        return clubPts[club.id] ?? 0;
-    })();
-
-    return (
-        <button
-            className={`club-item w-full text-left ${isActive && isDashboard ? "active" : ""}`}
-            onClick={() => dispatch({ type: "SET_ACTIVE_CLUB", clubId: club.id })}
-            style={{ background: "none", border: "none" }}
-        >
-            <span style={{ fontSize: "1.15rem" }}>{club.icon}</span>
-            <span style={{ flex: 1, fontSize: "0.825rem", fontWeight: isActive && isDashboard ? 600 : 400, color: "var(--text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                {club.name}
-            </span>
-            <span className="pill pill-amber" style={{ fontSize: "0.65rem" }}>{pts}</span>
-        </button>
-    );
+  return (
+    <button
+      className={`club-item w-full text-left ${isActive && isDashboard ? "active" : ""}`}
+      onClick={() => dispatch({ type: "SET_ACTIVE_CLUB", clubId: club.id })}
+      style={{ background: "none", border: "none", width: "100%" }}
+    >
+      <span style={{ fontSize: "1rem", flexShrink: 0 }}>{club.icon}</span>
+      <span style={{
+        flex: 1, fontSize: "0.82rem",
+        fontWeight: isActive && isDashboard ? 600 : 400,
+        color: "var(--text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis"
+      }}>
+        {club.name}
+      </span>
+      <span style={{
+        fontSize: "0.68rem", fontWeight: 700, fontFamily: "'JetBrains Mono', monospace",
+        color: isActive && isDashboard ? "var(--accent)" : "var(--text-muted)",
+        background: isActive && isDashboard ? "var(--accent-light)" : "var(--surface-2)",
+        borderRadius: 9999, padding: "0.1rem 0.45rem",
+        transition: "all 0.15s",
+      }}>
+        {pts}
+      </span>
+    </button>
+  );
 }
 
 export default function Sidebar() {
-    const { state, dispatch } = useApp();
-    const { user, isGuest, logout, captainClubs } = useAuth();
-    const pathname = usePathname();
-    const router = useRouter();
+  const { state, dispatch } = useApp();
+  const { user, isGuest, logout, captainClubs } = useAuth();
+  const pathname = usePathname();
+  const router = useRouter();
 
-    const handleLogout = () => {
-        logout();
-        router.push("/");
-    };
+  const handleLogout = async () => {
+    await logout();
+    router.push("/");
+  };
 
-    // Display info: auth user takes priority, else fallback to store
-    const displayName = user ? user.name : "Civilian Observer";
-    const displayInitials = user ? user.initials : "CO";
-    const displaySub = user
-        ? (user.role === "admin" ? "⭐ Admin · Armory" : `${user.aspirantType} · ${user.city}`)
-        : "Guest Mode";
+  const displayName = user ? user.name : "Guest";
+  const displayInitials = user ? user.initials : "G";
+  const displaySub = user
+    ? (user.role === "admin" ? "Administrator" : `${user.aspirantType ?? ""} · ${user.city ?? ""}`.trim().replace(/^·\s*/, ""))
+    : "Browsing as guest";
 
-    return (
-        <aside className="sidebar">
-            {/* Logo */}
-            <div style={{ padding: "1.5rem 1.25rem 1rem", borderBottom: "0.5px solid var(--border)" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-                    <div style={{ width: 32, height: 32, background: "var(--amber)", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem" }}>
-                        ⚔️
-                    </div>
-                    <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, fontSize: "1.05rem", color: "var(--text)" }}>
-                        ClubTrack
-                    </span>
-                </div>
-            </div>
+  const navItems = [
+    { href: "/ops", icon: LayoutDashboard, label: "Dashboard" },
+    { href: "/leaderboard", icon: Trophy, label: "Rankings" },
+    ...(user ? [{ href: "/profile", icon: User, label: "Profile" }] : []),
+    ...((user?.role === "admin" || (captainClubs && captainClubs.length > 0))
+      ? [{ href: "/admin", icon: Shield, label: user?.role === "admin" ? "Admin Panel" : "Verify" }]
+      : []),
+  ];
 
-            {/* Guest banner */}
-            {isGuest && !user && (
-                <div style={{ margin: "0.75rem 1rem 0", padding: "0.55rem 0.75rem", background: "rgba(78,95,59,0.1)", border: "1px solid rgba(78,95,59,0.25)", borderRadius: 8, fontSize: "0.75rem", color: "var(--text-sub)", display: "flex", flexDirection: "column", gap: "0.3rem" }}>
-                    <span style={{ fontWeight: 600, color: "var(--text)" }}>👁 Guest Mode</span>
-                    <span>You&apos;re browsing as a guest.{" "}
-                        <Link href="/login" style={{ color: "var(--amber)", fontWeight: 600, textDecoration: "none" }}>
-                            Sign in to participate →
-                        </Link>
-                    </span>
-                </div>
-            )}
+  return (
+    <aside className="sidebar">
+      {/* Brand */}
+      <div style={{ padding: "1.25rem 1rem 0.75rem", borderBottom: "1px solid var(--border)" }}>
+        <Link href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: "0.6rem" }}>
+          <div style={{
+            width: 30, height: 30, background: "var(--accent)", borderRadius: 8,
+            display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.9rem",
+            flexShrink: 0,
+          }}>
+            🎯
+          </div>
+          <span style={{ fontWeight: 700, fontSize: "1rem", color: "var(--text)", letterSpacing: "-0.02em" }}>
+            ClubTrack
+          </span>
+        </Link>
+      </div>
 
-            {/* Nav links */}
-            <div style={{ padding: "0.75rem 0.5rem 0.25rem" }}>
-                <Link href="/ops" className={`nav-link ${pathname === "/ops" ? "active-nav" : ""}`} style={{ display: "flex", marginBottom: "0.15rem" }}>
-                    <Crosshair size={14} />
-                    Dashboard
-                </Link>
-                <Link href="/leaderboard" className={`nav-link ${pathname === "/leaderboard" ? "active-nav" : ""}`} style={{ display: "flex", marginBottom: "0.15rem" }}>
-                    <Trophy size={14} />
-                    Rankings
-                </Link>
-                {user && (
-                    <Link href="/profile" className={`nav-link ${pathname === "/profile" ? "active-nav" : ""}`} style={{ display: "flex", marginBottom: "0.15rem" }}>
-                        <User size={14} />
-                        Profile
-                    </Link>
-                )}
-                {(user?.role === "admin" || (captainClubs && captainClubs.length > 0)) && (
-                    <Link href="/admin" className={`nav-link ${pathname === "/admin" ? "active-nav" : ""}`} style={{ display: "flex" }}>
-                        <Shield size={14} />
-                        {user?.role === "admin" ? "Admin Panel" : "Verify"}
-                    </Link>
-                )}
-            </div>
+      {/* Guest banner */}
+      {isGuest && !user && (
+        <div style={{ margin: "0.75rem 0.75rem 0", padding: "0.6rem 0.85rem", background: "var(--accent-light)", border: "1px solid var(--accent-dim)", borderRadius: 8, fontSize: "0.78rem", color: "var(--text-sub)", display: "flex", flexDirection: "column", gap: "0.3rem" }}>
+          <span style={{ fontWeight: 600, color: "var(--text)" }}>Browsing as Guest</span>
+          <Link href="/login" style={{ color: "var(--accent)", fontWeight: 600, textDecoration: "none", fontSize: "0.77rem" }}>
+            Sign in to earn points →
+          </Link>
+        </div>
+      )}
 
-            <div className="divider" style={{ margin: "0.5rem 1rem" }} />
+      {/* Nav */}
+      <nav style={{ padding: "0.6rem 0.5rem 0.25rem", display: "flex", flexDirection: "column", gap: "0.1rem" }}>
+        {navItems.map(({ href, icon: Icon, label }) => (
+          <Link
+            key={href}
+            href={href}
+            className={`nav-link ${pathname === href ? "active-nav" : ""}`}
+          >
+            <Icon size={15} style={{ flexShrink: 0 }} />
+            {label}
+          </Link>
+        ))}
+      </nav>
 
-            {/* Squad list heading */}
-            <div style={{ padding: "0 1.25rem", marginBottom: "0.35rem" }}>
-                <span style={{ fontSize: "0.67rem", fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
-                    My Clubs
+      <div className="divider" style={{ margin: "0.5rem 0.75rem" }} />
+
+      {/* Club list */}
+      <div style={{ padding: "0 0.5rem 0.25rem" }}>
+        <div style={{ padding: "0 0.25rem 0.4rem 0.25rem", fontSize: "0.67rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+          My Clubs
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.05rem" }}>
+          <ClubChip club={{ id: "all", name: "All Clubs", icon: "🌐", description: "", color: "var(--accent)" }} />
+          {state.clubs.map((club) => <ClubChip key={club.id} club={club} />)}
+        </div>
+      </div>
+
+      <div style={{ flex: 1 }} />
+
+      {/* User row */}
+      <div style={{ borderTop: "1px solid var(--border)", padding: "0.75rem 0.85rem" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+          <div className="avatar" style={{ width: 32, height: 32, fontSize: "0.65rem", cursor: "pointer" }}>
+            {displayInitials}
+          </div>
+          <div style={{ overflow: "hidden", flex: 1, minWidth: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+              <div style={{ fontSize: "0.82rem", fontWeight: 600, color: "var(--text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                {displayName}
+              </div>
+              {captainClubs.length > 0 && (
+                <span style={{ fontSize: "0.58rem", background: "var(--accent-light)", color: "var(--accent)", border: "1px solid var(--accent-dim)", borderRadius: 4, padding: "0.1rem 0.3rem", fontWeight: 700, flexShrink: 0 }}>
+                  CAPTAIN
                 </span>
+              )}
             </div>
-
-            {/* Squads */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.1rem", flex: 1 }}>
-                <ClubItem club={{ id: "all", name: "All Squads", icon: "🌐", description: "", color: "var(--amber)" }} />
-                {state.clubs.map((club) => <ClubItem key={club.id} club={club} />)}
-            </div>
-
-            {/* Bottom: user row */}
-            <div style={{ borderTop: "0.5px solid var(--border)", padding: "0.75rem 1rem" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-                    <div className="avatar" style={{ width: 34, height: 34 }}>
-                        {displayInitials}
-                    </div>
-                    <div style={{ overflow: "hidden", flex: 1 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
-                            <div style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                                {displayName}
-                            </div>
-                            {captainClubs.length > 0 && (
-                                <span title="Squad Captain" style={{ fontSize: "0.6rem", background: "rgba(78,95,59,0.15)", color: "var(--amber)", border: "0.5px solid rgba(78,95,59,0.3)", borderRadius: 4, padding: "0.1rem 0.3rem", fontWeight: 700, display: "flex", alignItems: "center", gap: "2px" }}>
-                                    <Shield size={8} /> CAPTAIN
-                                </span>
-                            )}
-                        </div>
-                        <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>{displaySub}</div>
-                    </div>
-                    <button
-                        onClick={() => dispatch({ type: "TOGGLE_DARK_MODE" })}
-                        title={state.darkMode ? "Switch to light mode" : "Switch to dark mode"}
-                        style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: "0.25rem", borderRadius: 4, display: "flex", alignItems: "center" }}
-                    >
-                        {state.darkMode ? <Sun size={14} /> : <Moon size={14} />}
-                    </button>
-                    <button
-                        onClick={handleLogout}
-                        title="Sign Out"
-                        style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: "0.25rem", borderRadius: 4, display: "flex", alignItems: "center", transition: "color 0.15s" }}
-                        onMouseEnter={(e) => (e.currentTarget.style.color = "#f87171")}
-                        onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-muted)")}
-                    >
-                        <LogOut size={14} />
-                    </button>
-                </div>
-            </div>
-        </aside>
-    );
+            <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{displaySub}</div>
+          </div>
+          <div style={{ display: "flex", gap: "0.15rem", flexShrink: 0 }}>
+            <button
+              onClick={() => dispatch({ type: "TOGGLE_DARK_MODE" })}
+              className="icon-btn"
+              title={state.darkMode ? "Light mode" : "Dark mode"}
+            >
+              {state.darkMode ? <Sun size={14} /> : <Moon size={14} />}
+            </button>
+            <button
+              onClick={handleLogout}
+              className="icon-btn"
+              title="Sign out"
+              onMouseEnter={(e) => (e.currentTarget.style.color = "#f87171")}
+              onMouseLeave={(e) => (e.currentTarget.style.color = "")}
+            >
+              <LogOut size={14} />
+            </button>
+          </div>
+        </div>
+      </div>
+    </aside>
+  );
 }

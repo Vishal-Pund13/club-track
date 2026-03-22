@@ -7,7 +7,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Sidebar from "@/components/Sidebar";
 import MobileTabBar from "@/components/MobileTabBar";
-import { Plus, ChevronDown, ChevronUp, Check, X, Clock, ExternalLink, Shield } from "lucide-react";
+import { Plus, ChevronDown, ChevronUp, Check, X, Clock, ExternalLink, Shield, Users, ListTodo, UserPlus, ClipboardCheck } from "lucide-react";
 
 type AdminTab = "overview" | "missions" | "deploy" | "roster" | "verify" | "captains";
 
@@ -32,15 +32,14 @@ function KpiCard({ icon, label, value, sub, accent }: {
     icon: string; label: string; value: string | number; sub: string; accent?: boolean;
 }) {
     return (
-        <div style={{
-            background: accent ? "rgba(78,95,59,0.07)" : "var(--surface)",
-            border: `0.5px solid ${accent ? "rgba(78,95,59,0.3)" : "var(--border)"}`,
-            borderRadius: 12, padding: "1.25rem 1.4rem",
+        <div className={`stat-card ${accent ? "card-hover" : ""}`} style={{
+            background: accent ? "var(--accent-light)" : "var(--surface)",
+            borderColor: accent ? "var(--accent-dim)" : "var(--border)",
         }}>
-            <div style={{ fontSize: "1.5rem", marginBottom: "0.5rem" }}>{icon}</div>
-            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "1.85rem", fontWeight: 700, color: accent ? "var(--amber)" : "var(--text)", lineHeight: 1, marginBottom: "0.2rem" }}>{value}</div>
-            <div style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text)", marginBottom: "0.1rem" }}>{label}</div>
-            <div style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>{sub}</div>
+            <div style={{ fontSize: "1.4rem", marginBottom: "0.2rem" }}>{icon}</div>
+            <div className="stat-value" style={{ color: accent ? "var(--accent)" : "var(--text)" }}>{value}</div>
+            <div className="stat-label">{label}</div>
+            <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", marginTop: "0.2rem" }}>{sub}</div>
         </div>
     );
 }
@@ -64,9 +63,9 @@ function VerifCard({ verif, onReview }: {
     const timeLabel = submittedAt.toLocaleString("en-IN", { hour: "2-digit", minute: "2-digit", day: "numeric", month: "short" });
 
     return (
-        <div style={{ background: "var(--surface)", border: "0.5px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
+        <div style={{ background: "var(--bg)", border: "1px solid var(--border)", borderRadius: "var(--radius)", overflow: "hidden" }}>
             {/* Header row */}
-            <div style={{ display: "flex", alignItems: "flex-start", gap: "0.85rem", padding: "1rem 1.1rem" }}>
+            <div style={{ display: "flex", alignItems: "flex-start", gap: "0.85rem", padding: "1rem" }}>
                 {/* Avatar */}
                 <div className="avatar" style={{ width: 34, height: 34, fontSize: "0.65rem", flexShrink: 0 }}>
                     {profile.initials}
@@ -76,7 +75,7 @@ function VerifCard({ verif, onReview }: {
                 <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap", marginBottom: "0.2rem" }}>
                         <span style={{ fontWeight: 600, fontSize: "0.875rem", color: "var(--text)" }}>{profile.name}</span>
-                        <span className="pill pill-neutral" style={{ fontSize: "0.62rem" }}>{club?.icon} {club?.name}</span>
+                        <span className="pill pill-neutral">{club?.icon} {club?.name}</span>
                         <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "0.75rem", color: "var(--amber)", fontWeight: 700 }}>+{task.pts} pts</span>
                     </div>
                     <div style={{ fontSize: "0.82rem", color: "var(--text-sub)", marginBottom: "0.2rem" }}>{task.title}</div>
@@ -84,7 +83,7 @@ function VerifCard({ verif, onReview }: {
                 </div>
 
                 {/* Expand proof */}
-                <button onClick={() => setExpanded(e => !e)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", display: "flex", padding: "0.2rem" }}>
+                <button className="icon-btn" onClick={() => setExpanded(e => !e)}>
                     {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                 </button>
             </div>
@@ -92,19 +91,19 @@ function VerifCard({ verif, onReview }: {
             {/* Proof + review controls */}
             <AnimatePresence>
                 {expanded && (
-                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} style={{ overflow: "hidden" }}>
-                        <div style={{ borderTop: "0.5px solid var(--border)", padding: "1rem 1.1rem", display: "flex", flexDirection: "column", gap: "0.85rem" }}>
+                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} style={{ overflow: "hidden" }}>
+                        <div style={{ borderTop: "1px solid var(--border)", padding: "1rem", display: "flex", flexDirection: "column", gap: "0.85rem", background: "var(--surface)" }}>
                             {/* Proof */}
                             <div>
                                 <div style={{ fontSize: "0.67rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--text-muted)", marginBottom: "0.4rem" }}>
                                     Proof Submitted
                                 </div>
                                 {verif.proof_text ? (
-                                    <div style={{ background: "var(--surface-2)", border: "0.5px solid var(--border)", borderRadius: 8, padding: "0.7rem 0.9rem", fontSize: "0.82rem", color: "var(--text-sub)", wordBreak: "break-all" }}>
+                                    <div style={{ background: "var(--bg)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", padding: "0.7rem 0.9rem", fontSize: "0.82rem", color: "var(--text-sub)", wordBreak: "break-all" }}>
                                         {verif.proof_text.startsWith("http") ? (
                                             <a href={verif.proof_text} target="_blank" rel="noopener noreferrer"
-                                                style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem", color: "var(--amber)", textDecoration: "none" }}>
-                                                <ExternalLink size={12} /> Open proof link
+                                                style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem", color: "var(--amber)", textDecoration: "none", fontWeight: 500 }}>
+                                                <ExternalLink size={12} /> View attached link
                                             </a>
                                         ) : verif.proof_text}
                                     </div>
@@ -116,9 +115,9 @@ function VerifCard({ verif, onReview }: {
                             {/* Captain's note */}
                             <div>
                                 <label style={{ display: "block", fontSize: "0.67rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--text-muted)", marginBottom: "0.4rem" }}>
-                                    Captain's Note (optional)
+                                    Captain's Feedback (optional)
                                 </label>
-                                <input className="input-field" placeholder="e.g. Video was clear, good effort / Screenshot didn't match"
+                                <input className="input-field" placeholder="e.g. Good effort on the run!"
                                     value={note} onChange={e => setNote(e.target.value)} />
                             </div>
 
@@ -126,17 +125,13 @@ function VerifCard({ verif, onReview }: {
                             <div style={{ display: "flex", gap: "0.6rem" }}>
                                 <button className="btn-amber"
                                     onClick={() => { onReview(verif.id, "approved", note); setExpanded(false); }}
-                                    style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem" }}>
+                                    style={{ flex: 1, justifyContent: "center" }}>
                                     <Check size={14} /> Approve
                                 </button>
                                 <button
                                     onClick={() => { onReview(verif.id, "rejected", note); setExpanded(false); }}
-                                    style={{
-                                        flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem",
-                                        background: "rgba(248,113,113,0.08)", border: "0.5px solid rgba(248,113,113,0.3)",
-                                        borderRadius: 8, color: "#f87171", fontWeight: 600, fontSize: "0.82rem", cursor: "pointer",
-                                        padding: "0.55rem",
-                                    }}>
+                                    className="btn-danger"
+                                    style={{ flex: 1, justifyContent: "center" }}>
                                     <X size={14} /> Reject
                                 </button>
                             </div>
@@ -161,6 +156,7 @@ export default function AdminPage() {
     const [enrolledCount, setEnrolledCount] = useState(0);
     const [captainAssignments, setCaptainAssignments] = useState<CaptainAssignment[]>([]);
     const [isMobile, setIsMobile] = useState(false);
+
     useEffect(() => {
         const check = () => setIsMobile(window.innerWidth < 768);
         check();
@@ -264,22 +260,22 @@ export default function AdminPage() {
         setTimeout(() => setSubmitted(false), 3000);
     }
 
-    const dateLabel = new Date(TODAY).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+    const dateLabel = new Date(TODAY).toLocaleDateString("en-US", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 
-    let tabs: { id: AdminTab; label: string; icon: string; badge?: number }[] = [];
+    let tabs: { id: AdminTab; label: string; icon: React.ReactNode; badge?: number }[] = [];
 
     if (user?.role === "admin") {
         tabs = [
-            { id: "overview", label: "Overview", icon: "📊" },
-            { id: "missions", label: "Tasks", icon: "✅" },
-            ...(!isMobile ? [{ id: "deploy" as AdminTab, label: "Post Task", icon: "➕" }] : []),
-            { id: "roster", label: "Members", icon: "👥" },
-            { id: "verify", label: "Verify", icon: "🛡", badge: pendingVerifs.length },
-            { id: "captains", label: "Captains", icon: "🎖️" },
+            { id: "overview", label: "Overview", icon: <ClipboardCheck size={15}/> },
+            { id: "missions", label: "Tasks", icon: <ListTodo size={15}/> },
+            ...(!isMobile ? [{ id: "deploy" as AdminTab, label: "Post Task", icon: <Plus size={15}/> }] : []),
+            { id: "roster", label: "Members", icon: <Users size={15}/> },
+            { id: "verify", label: "Verify", icon: <Shield size={15}/>, badge: pendingVerifs.length },
+            { id: "captains", label: "Captains", icon: <UserPlus size={15}/> },
         ];
     } else if ((authCaptainClubs || []).length > 0) {
         tabs = [
-            { id: "verify", label: "Verify Submissions", icon: "🛡", badge: pendingVerifs.length },
+            { id: "verify", label: "Verify Submissions", icon: <Shield size={15}/>, badge: pendingVerifs.length },
         ];
     }
 
@@ -295,29 +291,29 @@ export default function AdminPage() {
 
                 <main className="page-main">
                     {/* Header */}
-                    <div style={{ marginBottom: "1.75rem" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", marginBottom: "0.2rem" }}>
-                            <Shield size={20} style={{ color: "var(--amber)" }} />
-                            <h1 style={{ margin: 0, fontSize: "1.5rem" }}>
+                    <div className="page-header">
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+                            <Shield size={24} style={{ color: "var(--accent)" }} />
+                            <h1>
                                 {user?.role === "admin" ? "Admin Panel" : "Verification Centre"}
                             </h1>
                         </div>
-                        <p style={{ fontSize: "0.78rem", color: "var(--text-muted)", margin: 0 }}>{dateLabel}</p>
+                        <p>{dateLabel}</p>
                     </div>
 
                     {/* Tab Bar */}
-                    <div className="tab-bar" style={{ marginBottom: "1.75rem", overflowX: "auto", flexShrink: 0, whiteSpace: "nowrap" }}>
+                    <div className="tab-bar" style={{ overflowX: "auto", overflowY: "hidden" }}>
                         {tabs.map(t => (
-                            <button key={t.id} className={`tab ${activeTab === t.id ? "active" : ""}`}
-                                style={{ background: "none", border: "none", position: "relative", flexShrink: 0 }} onClick={() => setActiveTab(t.id)}>
+                            <button key={t.id} className={`tab flex-center gap-sm ${activeTab === t.id ? "active" : ""}`}
+                                style={{ position: "relative", flexShrink: 0, whiteSpace: "nowrap", border: "none", background: "none" }} onClick={() => setActiveTab(t.id)}>
                                 {t.icon} {t.label}
                                 {t.badge && t.badge > 0 && (
                                     <span style={{
-                                        position: "absolute", top: -3, right: -4,
+                                        position: "absolute", top: -2, right: -4,
                                         background: "#f87171", color: "#fff",
-                                        fontSize: "0.6rem", fontWeight: 700,
-                                        borderRadius: "50%", width: 14, height: 14,
-                                        display: "flex", alignItems: "center", justifyContent: "center",
+                                        fontSize: "0.55rem", fontWeight: 700,
+                                        borderRadius: "50%", minWidth: 15, height: 15,
+                                        display: "flex", alignItems: "center", justifyContent: "center", padding: "0 4px"
                                     }}>{t.badge}</span>
                                 )}
                             </button>
@@ -327,21 +323,21 @@ export default function AdminPage() {
                     {/* ════════════════ OVERVIEW ════════════════════════════════ */}
                     {activeTab === "overview" && (
                         <motion.div key="overview" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
-                            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "0.85rem", marginBottom: "1.75rem" }}>
+                            <div className="kpi-grid">
                                 <KpiCard icon="👥" label="Members" value={state.users.length} sub={enrolledCount > 0 ? `+${enrolledCount} joined` : "Active members"} />
-                                <KpiCard icon="✅" label="Tasks Today" value={todayTasks.length} sub={`${allTodayTasks.length - todayTasks.length} paused`} />
+                                <KpiCard icon="📋" label="Tasks Today" value={todayTasks.length} sub={`${allTodayTasks.length - todayTasks.length} paused`} />
                                 <KpiCard icon="📈" label="Completion" value={`${completionRate}%`} sub={`${totalDone} of ${totalPossible} done`} accent />
                                 <KpiCard icon="🏆" label="Top Member" value={topPerformer?.name.split(" ")[0] ?? "—"} sub={topEntry ? `${topEntry[1]} pts today` : "No activity yet"} />
-                                <KpiCard icon="🛡" label="Pending Reviews" value={pendingVerifs.length} sub="Awaiting review" accent={pendingVerifs.length > 0} />
+                                <KpiCard icon="🛡" label="Pending" value={pendingVerifs.length} sub="Awaiting review" accent={pendingVerifs.length > 0} />
                             </div>
 
                             {/* Pending alert */}
                             {pendingVerifs.length > 0 && (
-                                <div style={{ background: "rgba(239,159,39,0.06)", border: "1px solid rgba(239,159,39,0.22)", borderRadius: 10, padding: "0.9rem 1.1rem", marginBottom: "1.5rem", display: "flex", alignItems: "center", gap: "0.6rem" }}>
+                                <div style={{ background: "rgba(239,159,39,0.08)", border: "1px solid rgba(239,159,39,0.25)", borderRadius: "var(--radius)", padding: "1rem", marginBottom: "1.5rem", display: "flex", alignItems: "center", gap: "0.6rem" }}>
                                     <Clock size={16} style={{ color: "var(--amber)", flexShrink: 0 }} />
-                                    <span style={{ fontSize: "0.82rem", color: "var(--text-sub)", fontWeight: 500 }}>
+                                    <span style={{ fontSize: "0.85rem", color: "var(--text-sub)", fontWeight: 500 }}>
                                         {pendingVerifs.length} submission{pendingVerifs.length > 1 ? "s" : ""} waiting for your review.{" "}
-                                        <button onClick={() => setActiveTab("verify")} style={{ background: "none", border: "none", color: "var(--amber)", fontWeight: 700, cursor: "pointer", padding: 0, fontSize: "0.82rem" }}>
+                                        <button onClick={() => setActiveTab("verify")} style={{ background: "none", border: "none", color: "var(--amber)", fontWeight: 700, cursor: "pointer", padding: 0 }}>
                                             Review now →
                                         </button>
                                     </span>
@@ -350,23 +346,23 @@ export default function AdminPage() {
 
                             {/* Needs Attention */}
                             {strugglingAspirants.length > 0 && (
-                                <div style={{ background: "rgba(248,113,113,0.05)", border: "1px solid rgba(248,113,113,0.2)", borderRadius: 10, padding: "1.1rem 1.25rem", marginBottom: "1.5rem" }}>
-                                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.75rem" }}>
+                                <div className="card" style={{ marginBottom: "1.5rem", borderColor: "rgba(248,113,113,0.3)" }}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "1rem" }}>
                                         <span>⚠️</span>
-                                        <span style={{ fontWeight: 600, fontSize: "0.875rem", color: "var(--text)" }}>
-                                            Needs Attention — {strugglingAspirants.length} member{strugglingAspirants.length > 1 ? "s" : ""} with no tasks done today
+                                        <span style={{ fontWeight: 600, fontSize: "0.95rem", color: "var(--text)" }}>
+                                            Needs Attention — {strugglingAspirants.length} member{strugglingAspirants.length > 1 ? "s" : ""} falling behind
                                         </span>
                                     </div>
                                     <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
                                         {strugglingAspirants.map(u => (
-                                            <div key={u.id} style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.5rem 0.75rem", background: "var(--surface)", borderRadius: 8, border: "0.5px solid var(--border)" }}>
+                                            <div key={u.id} style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.65rem 1rem", background: "var(--bg)", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)" }}>
                                                 <div className="avatar" style={{ width: 28, height: 28, fontSize: "0.6rem" }}>{u.initials}</div>
-                                                <div style={{ flex: 1 }}>
-                                                    <div style={{ fontSize: "0.85rem", fontWeight: 600, color: "var(--text)" }}>{u.name}</div>
+                                                <div style={{ flex: 1, minWidth: 0 }}>
+                                                    <div style={{ fontSize: "0.85rem", fontWeight: 600, color: "var(--text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{u.name}</div>
                                                     <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>{u.ssb_board}</div>
                                                 </div>
-                                                <span style={{ fontSize: "0.75rem", color: "var(--text-sub)" }}>🔥 {u.streak}d streak</span>
-                                                <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "0.78rem", color: "var(--text-muted)" }}>{u.total_pts} pts</span>
+                                                <span style={{ fontSize: "0.75rem", color: "var(--text-sub)", whiteSpace: "nowrap" }}>🔥 {u.streak}d streak</span>
+                                                <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "0.85rem", color: "var(--text-muted)" }}>{u.total_pts} pts</span>
                                             </div>
                                         ))}
                                     </div>
@@ -374,20 +370,22 @@ export default function AdminPage() {
                             )}
 
                             {/* Today's Activity */}
-                            <div style={{ background: "var(--surface)", border: "0.5px solid var(--border)", borderRadius: 10, padding: "1.25rem" }}>
+                            <div className="card">
                                 <div style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--text-muted)", marginBottom: "0.85rem" }}>
-                                    Today's Activity (Approved)
+                                    Today's Approved Activity
                                 </div>
                                 {activityItems.length === 0 ? (
-                                    <div style={{ fontSize: "0.82rem", color: "var(--text-muted)", fontStyle: "italic" }}>No approved completions recorded yet today.</div>
+                                    <div style={{ fontSize: "0.85rem", color: "var(--text-muted)", fontStyle: "italic", textAlign: "center", padding: "2rem 1rem", background: "var(--bg)", borderRadius: "var(--radius-sm)", border: "1px dashed var(--border)" }}>
+                                        No approved completions recorded yet today.
+                                    </div>
                                 ) : (
                                     <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
                                         {activityItems.map(({ user, pts, missionsDone }) => (
-                                            <div key={user!.id} style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.55rem 0.75rem", background: "var(--surface-2)", borderRadius: 8 }}>
+                                            <div key={user!.id} style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.65rem 1rem", background: "var(--bg)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)" }}>
                                                 <div className="avatar" style={{ width: 28, height: 28, fontSize: "0.6rem" }}>{user!.initials}</div>
-                                                <div style={{ flex: 1, fontSize: "0.85rem", color: "var(--text)", fontWeight: 500 }}>{user!.name}</div>
-                                                <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>{missionsDone} missions</span>
-                                                <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "0.88rem", fontWeight: 700, color: "var(--amber)" }}>+{pts}</span>
+                                                <div style={{ flex: 1, fontSize: "0.85rem", color: "var(--text)", fontWeight: 500, minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{user!.name}</div>
+                                                <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", whiteSpace: "nowrap" }}>{missionsDone} tasks</span>
+                                                <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "0.88rem", fontWeight: 700, color: "var(--accent)" }}>+{pts} pts</span>
                                             </div>
                                         ))}
                                     </div>
@@ -399,33 +397,35 @@ export default function AdminPage() {
                     {/* ════════════════ VERIFY ══════════════ */}
                     {activeTab === "verify" && (
                         <motion.div key="verify" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }} style={{ maxWidth: 660 }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1.5rem" }}>
-                                <Shield size={18} style={{ color: "var(--amber)" }} />
-                                <div>
-                                    <div style={{ fontWeight: 600, color: "var(--text)" }}>Proof Verification Queue</div>
-                                    <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
-                                        Review submitted proofs before points are credited
+                            <div className="card" style={{ background: "transparent", border: "none", padding: 0 }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1.5rem" }}>
+                                    <Shield size={20} style={{ color: "var(--accent)" }} />
+                                    <div>
+                                        <div style={{ fontWeight: 600, color: "var(--text)", fontSize: "1.1rem" }}>Proof Verification Queue</div>
+                                        <div style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
+                                            Review submitted proofs before points are credited
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            {pendingVerifs.length === 0 ? (
-                                <div style={{ textAlign: "center", padding: "3rem 1rem", border: "0.5px dashed var(--border)", borderRadius: 12, color: "var(--text-muted)" }}>
-                                    <div style={{ fontSize: "2rem", marginBottom: "0.75rem" }}>✅</div>
-                                    <div style={{ fontWeight: 600, marginBottom: "0.25rem" }}>All clear!</div>
-                                    <div style={{ fontSize: "0.8rem" }}>No pending submissions right now.</div>
-                                </div>
-                            ) : (
-                                <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                                    <AnimatePresence>
-                                        {pendingVerifs.map(v => (
-                                            <motion.div key={v.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: 20 }}>
-                                                <VerifCard verif={v} onReview={handleReview} />
-                                            </motion.div>
-                                        ))}
-                                    </AnimatePresence>
-                                </div>
-                            )}
+                                {pendingVerifs.length === 0 ? (
+                                    <div style={{ textAlign: "center", padding: "4rem 1rem", border: "1px dashed var(--border)", borderRadius: "var(--radius)", background: "var(--surface)", color: "var(--text-muted)" }}>
+                                        <div style={{ fontSize: "2rem", marginBottom: "0.75rem" }}>✅</div>
+                                        <div style={{ fontWeight: 600, fontSize: "1rem", marginBottom: "0.25rem", color: "var(--text)" }}>All clear!</div>
+                                        <div style={{ fontSize: "0.85rem" }}>No pending submissions right now.</div>
+                                    </div>
+                                ) : (
+                                    <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                                        <AnimatePresence>
+                                            {pendingVerifs.map(v => (
+                                                <motion.div key={v.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.98 }}>
+                                                    <VerifCard verif={v} onReview={handleReview} />
+                                                </motion.div>
+                                            ))}
+                                        </AnimatePresence>
+                                    </div>
+                                )}
+                            </div>
                         </motion.div>
                     )}
 
@@ -436,11 +436,11 @@ export default function AdminPage() {
                                 const clubTasks = allTodayTasks.filter(t => t.club_id === club.id);
                                 if (clubTasks.length === 0) return null;
                                 return (
-                                    <div key={club.id} style={{ marginBottom: "1.75rem" }}>
-                                        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.55rem" }}>
-                                            <span style={{ fontSize: "1rem" }}>{club.icon}</span>
-                                            <span style={{ fontSize: "0.9rem", fontWeight: 600, color: "var(--text)" }}>{club.name}</span>
-                                            <span className="pill pill-neutral" style={{ fontSize: "0.62rem" }}>{clubTasks.length}</span>
+                                    <div key={club.id} className="card" style={{ marginBottom: "1.5rem", padding: "1rem" }}>
+                                        <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", marginBottom: "0.75rem" }}>
+                                            <span style={{ fontSize: "1.2rem" }}>{club.icon}</span>
+                                            <span style={{ fontSize: "0.95rem", fontWeight: 700, color: "var(--text)" }}>{club.name} tasks</span>
+                                            <span className="pill pill-neutral" style={{ background: "var(--bg)" }}>{clubTasks.length} total</span>
                                         </div>
                                         <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
                                             {clubTasks.map(task => {
@@ -449,46 +449,45 @@ export default function AdminPage() {
                                                 const pct = state.users.length > 0 ? Math.round((completions.length / state.users.length) * 100) : 0;
                                                 const pendingForTask = state.verifications.filter(v => v.task_id === task.id && v.status === "pending").length;
                                                 return (
-                                                    <div key={task.id} style={{ background: "var(--surface)", border: "0.5px solid var(--border)", borderRadius: 10, overflow: "hidden" }}>
+                                                    <div key={task.id} style={{ background: "var(--bg)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", overflow: "hidden" }}>
                                                         <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.85rem 1rem" }}>
                                                             <button className={`toggle ${task.active ? "on" : ""}`} onClick={() => toggleTaskActiveRealtime(task.id, task.active)} title={task.active ? "Pause" : "Activate"} />
                                                             <div style={{ flex: 1, minWidth: 0 }}>
-                                                                <div style={{ fontSize: "0.875rem", fontWeight: 500, color: task.active ? "var(--text)" : "var(--text-muted)", textDecoration: task.active ? "none" : "line-through" }}>
+                                                                <div style={{ fontSize: "0.875rem", fontWeight: 500, color: task.active ? "var(--text)" : "var(--text-muted)", textDecoration: task.active ? "none" : "line-through", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                                                                     {task.title}
                                                                 </div>
                                                                 <div style={{ display: "flex", alignItems: "center", gap: "0.65rem", marginTop: "0.35rem" }}>
-                                                                    <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontFamily: "'JetBrains Mono', monospace" }}>{task.pts} pts</span>
+                                                                    <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontFamily: "'JetBrains Mono', monospace" }}>{task.pts} pts</span>
                                                                     <div className="progress-track" style={{ width: 80, height: 4 }}>
                                                                         <div className="progress-fill" style={{ width: `${pct}%` }} />
                                                                     </div>
-                                                                    <span style={{ fontSize: "0.7rem", fontWeight: 600, color: completions.length === 0 ? "var(--text-muted)" : "var(--amber)" }}>
+                                                                    <span style={{ fontSize: "0.7rem", fontWeight: 600, color: completions.length === 0 ? "var(--text-muted)" : "var(--accent)" }}>
                                                                         {completions.length}/{state.users.length} approved
                                                                     </span>
                                                                     {pendingForTask > 0 && (
-                                                                        <span style={{ fontSize: "0.62rem", color: "var(--amber)", background: "rgba(239,159,39,0.1)", border: "0.5px solid rgba(239,159,39,0.3)", borderRadius: 5, padding: "0.1rem 0.4rem", fontWeight: 600 }}>
+                                                                        <span style={{ fontSize: "0.62rem", color: "var(--amber)", background: "rgba(239,159,39,0.1)", border: "1px solid rgba(239,159,39,0.3)", borderRadius: 5, padding: "0.1rem 0.4rem", fontWeight: 600 }}>
                                                                             <Clock size={9} style={{ display: "inline", marginRight: 2 }} />{pendingForTask} pending
                                                                         </span>
                                                                     )}
                                                                 </div>
                                                             </div>
-                                                            <button onClick={() => setExpandedMission(isExpanded ? null : task.id)}
-                                                                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", display: "flex", alignItems: "center" }}>
-                                                                {isExpanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+                                                            <button className="icon-btn" onClick={() => setExpandedMission(isExpanded ? null : task.id)}>
+                                                                {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                                                             </button>
                                                         </div>
                                                         <AnimatePresence>
                                                             {isExpanded && (
-                                                                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} style={{ overflow: "hidden" }}>
-                                                                    <div style={{ padding: "0.75rem 1rem 1rem", borderTop: "0.5px solid var(--border)" }}>
+                                                                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} style={{ overflow: "hidden" }}>
+                                                                    <div style={{ padding: "0.75rem 1rem 1rem", borderTop: "1px solid var(--border)", background: "var(--surface)" }}>
                                                                         <div style={{ fontSize: "0.7rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)", marginBottom: "0.5rem" }}>
-                                                                            Approved by ({completions.length})
+                                                                            Approved completions ({completions.length})
                                                                         </div>
                                                                         {completions.length === 0 ? (
-                                                                            <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", fontStyle: "italic" }}>No approved completions yet</div>
+                                                                            <div style={{ fontSize: "0.82rem", color: "var(--text-muted)", fontStyle: "italic" }}>No approved completions yet.</div>
                                                                         ) : (
                                                                             <div className="completions-list">
                                                                                 {completions.map(c => {
-                                                                                    const u = state.users.find(u => u.id === c.user_id);
+                                                                                    const u = state.users.find(usr => usr.id === c.user_id);
                                                                                     return u ? (
                                                                                         <div key={c.user_id} className="completion-chip">
                                                                                             <div className="avatar" style={{ width: 22, height: 22, fontSize: "0.55rem" }}>{u.initials}</div>
@@ -510,8 +509,8 @@ export default function AdminPage() {
                                 );
                             })}
                             {allTodayTasks.length === 0 && (
-                                <div style={{ textAlign: "center", padding: "3rem 1rem", color: "var(--text-muted)", border: "0.5px dashed var(--border)", borderRadius: 10 }}>
-                                    🎖 No missions deployed today. Go to Deploy tab to add one.
+                                <div style={{ textAlign: "center", padding: "4rem 1rem", color: "var(--text-muted)", border: "1px dashed var(--border)", borderRadius: "var(--radius)", background: "var(--surface)" }}>
+                                    🎖 No tasks deployed today. Go to 'Post Task' tab to add one.
                                 </div>
                             )}
                         </motion.div>
@@ -521,67 +520,70 @@ export default function AdminPage() {
                     {activeTab === "deploy" && !isMobile && (
                         <motion.div key="deploy" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }} style={{ maxWidth: 480 }}>
                             <div className="card">
-                                <h2 style={{ fontSize: "1rem", margin: "0 0 0.3rem" }}>➕ Post a Task</h2>
-                                <p style={{ fontSize: "0.78rem", color: "var(--text-muted)", margin: "0 0 1.5rem" }}>
-                                    Posted tasks are immediately visible to all enrolled aspirants.
+                                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
+                                    <Plus size={18} style={{ color: "var(--accent)" }} />
+                                    <h2 style={{ fontSize: "1.1rem", margin: 0 }}>Create a new Task</h2>
+                                </div>
+                                <p style={{ fontSize: "0.82rem", color: "var(--text-muted)", margin: "0 0 1.5rem" }}>
+                                    New tasks are immediately pushed to all users seamlessly in real-time.
                                 </p>
 
                                 <form onSubmit={handleDeploy} style={{ display: "flex", flexDirection: "column", gap: "1.1rem" }}>
                                     <div>
-                                        <label style={{ display: "block", fontSize: "0.72rem", fontWeight: 700, color: "var(--text-sub)", marginBottom: "0.4rem", textTransform: "uppercase", letterSpacing: "0.07em" }}>Squad</label>
+                                        <label style={{ display: "block", fontSize: "0.72rem", fontWeight: 700, color: "var(--text-sub)", marginBottom: "0.4rem", textTransform: "uppercase", letterSpacing: "0.07em" }}>Club</label>
                                         <select className="input-field" value={form.club_id}
                                             onChange={e => setForm(f => ({ ...f, club_id: e.target.value }))}
-                                            style={{ background: "var(--surface)", cursor: "pointer" }}>
-                                            {CLUBS.map(c => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
+                                            style={{ cursor: "pointer" }}>
+                                            {CLUBS.filter(c => c.id !== "all").map(c => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
                                         </select>
                                     </div>
 
                                     <div>
-                                        <label style={{ display: "block", fontSize: "0.72rem", fontWeight: 700, color: "var(--text-sub)", marginBottom: "0.4rem", textTransform: "uppercase", letterSpacing: "0.07em" }}>Mission Title</label>
+                                        <label style={{ display: "block", fontSize: "0.72rem", fontWeight: 700, color: "var(--text-sub)", marginBottom: "0.4rem", textTransform: "uppercase", letterSpacing: "0.07em" }}>Task Title</label>
                                         <input className="input-field" placeholder="e.g. Complete a 5 km morning run"
                                             value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} required />
                                     </div>
 
                                     <div>
                                         <label style={{ display: "block", fontSize: "0.72rem", fontWeight: 700, color: "var(--text-sub)", marginBottom: "0.4rem", textTransform: "uppercase", letterSpacing: "0.07em" }}>Description</label>
-                                        <input className="input-field" placeholder="e.g. Log your run on Strava and share the activity link."
+                                        <input className="input-field" placeholder="Any special instructions..."
                                             value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
                                     </div>
 
                                     <div>
-                                        <label style={{ display: "block", fontSize: "0.72rem", fontWeight: 700, color: "var(--text-sub)", marginBottom: "0.4rem", textTransform: "uppercase", letterSpacing: "0.07em" }}>Points — <span style={{ fontFamily: "'JetBrains Mono', monospace", color: "var(--amber)" }}>{form.pts}</span></label>
+                                        <label style={{ display: "block", fontSize: "0.72rem", fontWeight: 700, color: "var(--text-sub)", marginBottom: "0.4rem", textTransform: "uppercase", letterSpacing: "0.07em" }}>Points — <span style={{ fontFamily: "'JetBrains Mono', monospace", color: "var(--accent)" }}>{form.pts}</span></label>
                                         <input type="range" min={5} max={50} step={5} value={form.pts}
                                             onChange={e => setForm(f => ({ ...f, pts: Number(e.target.value) }))}
-                                            style={{ width: "100%", accentColor: "var(--amber)" }} />
+                                            style={{ width: "100%", accentColor: "var(--accent)" }} />
                                         <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.65rem", color: "var(--text-muted)", marginTop: "0.25rem" }}>
                                             <span>5 — quick win</span><span>50 — intensive</span>
                                         </div>
                                     </div>
 
                                     {/* Requires proof toggle */}
-                                    <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", background: "var(--bg)", border: "1px solid var(--border)", padding: "1rem", borderRadius: "var(--radius-sm)" }}>
                                         <button
                                             type="button"
                                             className={`toggle ${form.requires_proof ? "on" : ""}`}
                                             onClick={() => setForm(f => ({ ...f, requires_proof: !f.requires_proof }))}
                                         />
                                         <div>
-                                            <div style={{ fontSize: "0.82rem", fontWeight: 600, color: "var(--text)" }}>Require Proof Submission</div>
-                                            <div style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>
+                                            <div style={{ fontSize: "0.85rem", fontWeight: 600, color: "var(--text)" }}>Require Proof Submission</div>
+                                            <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
                                                 {form.requires_proof ? "Aspirants must submit proof; captain reviews before points credit." : "Points credited immediately on completion."}
                                             </div>
                                         </div>
                                     </div>
 
-                                    <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", paddingTop: "0.25rem" }}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: "1rem", paddingTop: "0.5rem" }}>
                                         <button type="submit" className="btn-amber">
-                                            <Plus size={14} /> Post Task
+                                            Post Task
                                         </button>
                                         <AnimatePresence>
                                             {submitted && (
                                                 <motion.span initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}
-                                                    style={{ fontSize: "0.8rem", color: "var(--amber)", fontWeight: 500 }}>
-                                                    ✓ Mission deployed!
+                                                    style={{ fontSize: "0.85rem", color: "var(--accent)", fontWeight: 600 }}>
+                                                    ✓ Task deployed to all!
                                                 </motion.span>
                                             )}
                                         </AnimatePresence>
@@ -607,79 +609,78 @@ export default function AdminPage() {
                                 const canNext = end < total;
 
                                 return (
-                                    <>
-                            <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginBottom: "1rem", fontWeight: 500 }}>
-                                showing {total === 0 ? 0 : start + 1} to {end} of {total} aspirants {"·"} sorted by approved pts
-                            </div>
-                            <div style={{ display: "grid", gridTemplateColumns: "2rem 2.25rem 1fr 4.5rem 4.5rem 5rem", gap: "0.5rem", alignItems: "center", padding: "0.25rem 1rem", marginBottom: "0.4rem" }}>
-                                <div /><div />
-                                <div style={{ fontSize: "0.67rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)" }}>Aspirant</div>
-                                <div style={{ fontSize: "0.67rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)", textAlign: "center" }}>Streak</div>
-                                <div style={{ fontSize: "0.67rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)", textAlign: "center" }}>Today</div>
-                                <div style={{ fontSize: "0.67rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)", textAlign: "center" }}>Points</div>
-                            </div>
-                            <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
-                                {pageUsers.map((user, i) => {
-                                    const todayPts = todayPtsPerUser[user.id] ?? 0;
-                                    const missionsDoneToday = state.completions.filter(c => {
-                                        const t = state.tasks.find(t2 => t2.id === c.task_id);
-                                        return c.user_id === user.id && t?.date === TODAY && t?.active;
-                                    }).length;
-                                    const isStruggling = todayPts === 0;
-
-                                    return (
-                                        <div key={user.id} style={{
-                                            display: "grid", gridTemplateColumns: "2rem 2.25rem 1fr 4.5rem 4.5rem 5rem",
-                                            gap: "0.5rem", alignItems: "center", padding: "0.75rem 1rem",
-                                            background: isStruggling ? "rgba(248,113,113,0.04)" : "var(--surface)",
-                                            border: `0.5px solid ${isStruggling ? "rgba(248,113,113,0.18)" : "var(--border)"}`,
-                                            borderRadius: 10,
-                                        }}>
-                                            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "0.8rem", fontWeight: 700, color: "var(--text-muted)", textAlign: "center" }}>
-                                                {start + i === 0 ? "🥇" : start + i === 1 ? "🥈" : start + i === 2 ? "🥉" : `${start + i + 1}`}
-                                            </span>
-                                            <div className="avatar" style={{ width: 30, height: 30, fontSize: "0.6rem" }}>{user.initials}</div>
-                                            <div>
-                                                <div style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--text)" }}>{user.name}</div>
-                                                <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>{user.ssb_board}</div>
-                                            </div>
-                                            <div style={{ textAlign: "center" }}>
-                                                <span style={{ fontSize: "0.82rem", color: "var(--amber)" }}>🔥 {user.streak}d</span>
-                                            </div>
-                                            <div style={{ textAlign: "center" }}>
-                                                <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "0.9rem", fontWeight: 700, color: isStruggling ? "#f87171" : "var(--amber)" }}>
-                                                    {missionsDoneToday}/{todayTasks.length}
-                                                </span>
-                                            </div>
-                                            <div style={{ textAlign: "center" }}>
-                                                <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "0.9rem", fontWeight: 700, color: "var(--text)" }}>
-                                                    {user.total_pts.toLocaleString()}
-                                                </span>
-                                            </div>
+                                    <div className="card">
+                                        <div style={{ fontSize: "0.82rem", color: "var(--text-muted)", marginBottom: "1rem", fontWeight: 500, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                            <span>Showing {total === 0 ? 0 : start + 1} to {end} of {total} total members</span>
+                                            <span className="pill pill-neutral border-0">Sorted by Today's Pts</span>
                                         </div>
-                                    );
-                                })}
-                            </div>
+                                        <div style={{ display: "grid", gridTemplateColumns: "2.5rem 2.25rem 1fr 4.5rem 4.5rem 5rem", gap: "0.5rem", alignItems: "center", padding: "0.25rem 1rem", marginBottom: "0.4rem" }}>
+                                            <div /><div />
+                                            <div style={{ fontSize: "0.67rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)" }}>Aspirant</div>
+                                            <div style={{ fontSize: "0.67rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)", textAlign: "center" }}>Streak</div>
+                                            <div style={{ fontSize: "0.67rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)", textAlign: "center" }}>Today</div>
+                                            <div style={{ fontSize: "0.67rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)", textAlign: "center" }}>Pts</div>
+                                        </div>
+                                        <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
+                                            {pageUsers.map((user, i) => {
+                                                const todayPts = todayPtsPerUser[user.id] ?? 0;
+                                                const missionsDoneToday = state.completions.filter(c => {
+                                                    const t = state.tasks.find(t2 => t2.id === c.task_id);
+                                                    return c.user_id === user.id && t?.date === TODAY && t?.active;
+                                                }).length;
+                                                const isStruggling = todayPts === 0;
 
-                            <div style={{ display: "flex", justifyContent: "center", gap: "0.6rem", marginTop: "1rem" }}>
-                                <button
-                                    className="btn-outline"
-                                    onClick={() => setRosterPage(p => Math.max(0, p - 1))}
-                                    disabled={!canPrev}
-                                    style={{ opacity: canPrev ? 1 : 0.5, cursor: canPrev ? "pointer" : "not-allowed" }}
-                                >
-                                    ← Previous
-                                </button>
-                                <button
-                                    className="btn-outline"
-                                    onClick={() => setRosterPage(p => p + 1)}
-                                    disabled={!canNext}
-                                    style={{ opacity: canNext ? 1 : 0.5, cursor: canNext ? "pointer" : "not-allowed" }}
-                                >
-                                    Next →
-                                </button>
-                            </div>
-                                    </>
+                                                return (
+                                                    <div key={user.id} style={{
+                                                        display: "grid", gridTemplateColumns: "2.5rem 2.25rem 1fr 4.5rem 4.5rem 5rem",
+                                                        gap: "0.5rem", alignItems: "center", padding: "0.75rem 1rem",
+                                                        background: isStruggling ? "var(--surface)" : "var(--bg)",
+                                                        border: `1px solid var(--border)`,
+                                                        borderRadius: "var(--radius-sm)",
+                                                    }}>
+                                                        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "0.85rem", fontWeight: 700, color: "var(--text-muted)", textAlign: "center" }}>
+                                                            {start + i === 0 ? "🥇" : start + i === 1 ? "🥈" : start + i === 2 ? "🥉" : `${start + i + 1}`}
+                                                        </span>
+                                                        <div className="avatar" style={{ width: 30, height: 30, fontSize: "0.6rem" }}>{user.initials}</div>
+                                                        <div style={{ minWidth: 0 }}>
+                                                            <div style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{user.name}</div>
+                                                            <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>{user.ssb_board}</div>
+                                                        </div>
+                                                        <div style={{ textAlign: "center" }}>
+                                                            <span style={{ fontSize: "0.82rem", color: "var(--accent)", fontWeight: 600 }}>🔥 {user.streak}d</span>
+                                                        </div>
+                                                        <div style={{ textAlign: "center" }}>
+                                                            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "0.9rem", fontWeight: 700, color: isStruggling ? "var(--text-sub)" : "var(--text)" }}>
+                                                                {missionsDoneToday}/{todayTasks.length}
+                                                            </span>
+                                                        </div>
+                                                        <div style={{ textAlign: "center" }}>
+                                                            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "0.95rem", fontWeight: 700, color: "var(--text)" }}>
+                                                                {user.total_pts.toLocaleString()}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+
+                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "1rem", paddingTop: "1rem", borderTop: "1px solid var(--border)" }}>
+                                            <button
+                                                className="btn-outline"
+                                                onClick={() => setRosterPage(p => Math.max(0, p - 1))}
+                                                disabled={!canPrev}
+                                            >
+                                                ← Prev
+                                            </button>
+                                            <button
+                                                className="btn-outline"
+                                                onClick={() => setRosterPage(p => p + 1)}
+                                                disabled={!canNext}
+                                            >
+                                                Next →
+                                            </button>
+                                        </div>
+                                    </div>
                                 );
                             })()}
                         </motion.div>
@@ -688,44 +689,46 @@ export default function AdminPage() {
                     {/* ════════════════ CAPTAINS ════════════════════════════════ */}
                     {activeTab === "captains" && user?.role === "admin" && (
                         <motion.div key="captains" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }} style={{ maxWidth: 820 }}>
-                            <div style={{ padding: "1.25rem", background: "var(--surface)", border: "0.5px solid var(--border)", borderRadius: 12 }}>
+                            <div className="card">
                                 <div style={{ marginBottom: "1.5rem" }}>
-                                    <h2 style={{ fontSize: "1rem", margin: "0 0 0.3rem" }}>🎖️ Captain Management</h2>
-                                    <p style={{ fontSize: "0.78rem", color: "var(--text-muted)", margin: 0 }}>
-                                        Assign Captains to specific squads. Captains can only verify proof submissions for their assigned squads.
+                                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                                        <UserPlus size={18} style={{ color: "var(--accent)" }} />
+                                        <h2 style={{ fontSize: "1.1rem", margin: 0 }}>Captain Management</h2>
+                                    </div>
+                                    <p style={{ fontSize: "0.82rem", color: "var(--text-muted)", margin: "0.3rem 0 0" }}>
+                                        Assign Captains to specific squads to help you review and verify proof submissions.
                                     </p>
                                 </div>
 
-                                <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+                                <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
                                     {CLUBS.filter(c => c.id !== "all").map(club => {
                                         const assignment = captainAssignments.find(a => a.club_id === club.id);
                                         const currentCaptain = assignment ? state.users.find(u => u.id === assignment.profile_id) : null;
                                         const potentialCaptains = state.users.filter(u => u.role !== "admin" && u.id !== currentCaptain?.id);
 
                                         return (
-                                            <div key={club.id} style={{ padding: "1.1rem", background: "var(--surface-2)", borderRadius: 10, border: "0.5px solid var(--border)" }}>
+                                            <div key={club.id} style={{ padding: "1.25rem", background: "var(--bg)", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
                                                 <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "1rem" }}>
                                                     <span style={{ fontSize: "1.2rem" }}>{club.icon}</span>
-                                                    <span style={{ fontWeight: 600, fontSize: "0.95rem" }}>{club.name} Squad</span>
+                                                    <span style={{ fontWeight: 600, fontSize: "1rem" }}>{club.name} Squad</span>
                                                 </div>
 
                                                 {currentCaptain ? (
-                                                    <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem", background: "var(--surface)", border: "0.5px solid var(--border)", borderRadius: 8 }}>
+                                                    <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem 1rem", background: "var(--accent-light)", border: "1px solid var(--accent-dim)", borderRadius: "var(--radius-sm)" }}>
                                                         <div className="avatar" style={{ width: 28, height: 28, fontSize: "0.6rem" }}>{currentCaptain.initials}</div>
-                                                        <div style={{ flex: 1 }}>
-                                                            <div style={{ fontSize: "0.85rem", fontWeight: 600 }}>{currentCaptain.name}</div>
-                                                            <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>Current Captain</div>
+                                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                                            <div style={{ fontSize: "0.9rem", fontWeight: 600, color: "var(--text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{currentCaptain.name}</div>
+                                                            <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Assigned Captain</div>
                                                         </div>
                                                         <button
                                                             onClick={() => removeCaptain(club.id, currentCaptain.id)}
-                                                            className="btn-neutral"
-                                                            style={{ padding: "0.35rem 0.65rem", fontSize: "0.72rem", color: "#f87171" }}
+                                                            className="btn-danger"
                                                         >
-                                                            <X size={12} style={{ display: "inline", marginRight: 4 }} /> Remove
+                                                            <X size={14} /> Remove
                                                         </button>
                                                     </div>
                                                 ) : (
-                                                    <div style={{ padding: "0.75rem", background: "rgba(78,95,59,0.05)", border: "1px dashed rgba(78,95,59,0.2)", borderRadius: 8, textAlign: "center", fontSize: "0.78rem", color: "var(--text-muted)", marginBottom: "0.75rem" }}>
+                                                    <div style={{ padding: "1rem", background: "var(--surface)", border: "1px dashed var(--border)", borderRadius: "var(--radius-sm)", textAlign: "center", fontSize: "0.82rem", color: "var(--text-muted)", marginBottom: "0.75rem" }}>
                                                         No captain assigned to this squad.
                                                     </div>
                                                 )}
@@ -734,22 +737,20 @@ export default function AdminPage() {
                                                     <div style={{ fontSize: "0.67rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--text-muted)", marginBottom: "0.4rem" }}>
                                                         Assign New Captain
                                                     </div>
-                                                    <div style={{ display: "flex", gap: "0.5rem" }}>
-                                                        <select
-                                                            className="input-field"
-                                                            style={{ flex: 1, fontSize: "0.8rem", background: "var(--surface)" }}
-                                                            onChange={(e) => {
-                                                                const val = e.target.value;
-                                                                if (val) assignCaptain(club.id, val);
-                                                            }}
-                                                            value=""
-                                                        >
-                                                            <option value="" disabled>Select an aspirant...</option>
-                                                            {potentialCaptains.map(u => (
-                                                                <option key={u.id} value={u.id}>{u.name} ({u.city})</option>
-                                                            ))}
-                                                        </select>
-                                                    </div>
+                                                    <select
+                                                        className="input-field"
+                                                        onChange={(e) => {
+                                                            const val = e.target.value;
+                                                            if (val) assignCaptain(club.id, val);
+                                                        }}
+                                                        value=""
+                                                        style={{ cursor: "pointer" }}
+                                                    >
+                                                        <option value="" disabled>Select an aspirant...</option>
+                                                        {potentialCaptains.map(u => (
+                                                            <option key={u.id} value={u.id}>{u.name} ({u.city})</option>
+                                                        ))}
+                                                    </select>
                                                 </div>
                                             </div>
                                         );

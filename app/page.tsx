@@ -4,45 +4,41 @@ import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/lib/auth";
+import { ArrowRight, CheckCircle2, Trophy, BarChart3, ShieldCheck, Activity } from "lucide-react";
 
 const QUOTES = [
   {
-    text: "If a man says he is not afraid of dying, he is either lying or he is a Gorkha.",
-    author: "Field Marshal Sam Manekshaw",
-    title: "Field Marshal, Indian Army",
-  },
-  {
-    text: "Yeh dil maange more!",
-    author: "Captain Vikram Batra, PVC",
-    title: "Param Vir Chakra · Kargil War",
-  },
-  {
-    text: "Do not be led by others; carve your own path.",
-    author: "Field Marshal K.M. Cariappa",
-    title: "First Commander-in-Chief, Indian Army",
-  },
-  {
-    text: "The safety, honour and welfare of your country comes first, always and every time.",
-    author: "Field Marshal Sam Manekshaw",
-    title: "Field Marshal, Indian Army",
-  },
-  {
-    text: "A soldier's greatest reward is to see his country safe and his countrymen smiling.",
-    author: "Air Marshal Arjan Singh, DFC",
-    title: "Marshal of the Air Force, IAF",
+    text: "Success is not final, failure is not fatal: it is the courage to continue that counts.",
+    author: "Winston Churchill",
+    title: "Global Leader",
   },
   {
     text: "We did not choose this path — this path chose us.",
-    author: "Lt Gen. Zorawar Chand Bakshi, PVC",
-    title: "Param Vir Chakra, Indian Army",
+    author: "Zorawar Chand",
+    title: "Param Vir Chakra",
+  },
+  {
+    text: "Do not be led by others; carve your own path and leave a trail.",
+    author: "K.M. Cariappa",
+    title: "First Commander-in-Chief",
+  },
+  {
+    text: "The hard days are what make you stronger.",
+    author: "Aly Raisman",
+    title: "Olympic Champion",
+  },
+  {
+    text: "We are what we repeatedly do. Excellence, then, is not an act, but a habit.",
+    author: "Aristotle",
+    title: "Philosopher",
   },
 ];
 
 const FEATURES = [
-  { icon: "✅", label: "Daily Task Tracking" },
-  { icon: "🏆", label: "Live Leaderboard" },
-  { icon: "📊", label: "Progress Analytics" },
-  { icon: "🛡", label: "Verified Completions" },
+  { icon: <CheckCircle2 size={16} />, label: "Daily Task Tracking" },
+  { icon: <Trophy size={16} />, label: "Live Leaderboard" },
+  { icon: <BarChart3 size={16} />, label: "Progress Analytics" },
+  { icon: <ShieldCheck size={16} />, label: "Verified Submissions" },
 ];
 
 export default function LandingPage() {
@@ -50,7 +46,6 @@ export default function LandingPage() {
   const { user, enterAsGuest } = useAuth();
   const [quoteIdx, setQuoteIdx] = useState(0);
   const [visible, setVisible] = useState(true);
-  const [hovered, setHovered] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -76,47 +71,43 @@ export default function LandingPage() {
       style={{
         minHeight: "100vh",
         width: "100%",
-        background: "linear-gradient(160deg, #0c0e0a 0%, #101410 50%, #0e100c 100%)",
+        background: "var(--bg)",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
         position: "relative",
         overflow: "hidden",
-        fontFamily: "'Inter', system-ui, sans-serif",
       }}
     >
-      {/* Subtle background glow */}
-      <div style={{ position: "absolute", top: "-10%", left: "50%", transform: "translateX(-50%)", width: "70vw", height: "60vh", background: "radial-gradient(ellipse at 50% 0%, rgba(78,95,59,0.15) 0%, transparent 65%)", pointerEvents: "none" }} />
-      <div style={{ position: "absolute", bottom: 0, right: "10%", width: "40vw", height: "40vh", background: "radial-gradient(ellipse at 80% 100%, rgba(58,71,44,0.1) 0%, transparent 70%)", pointerEvents: "none" }} />
+      {/* Subtle modern background glow */}
+      <div style={{ position: "absolute", top: "-10%", left: "50%", transform: "translateX(-50%)", width: "70vw", height: "60vh", background: "radial-gradient(ellipse at 50% 0%, var(--accent-light) 0%, transparent 65%)", pointerEvents: "none", opacity: 0.5 }} />
 
       {/* Top nav bar */}
       <nav style={{
-        width: "100%", padding: "1rem 2rem", display: "flex", alignItems: "center", justifyContent: "space-between",
-        borderBottom: "1px solid rgba(78,95,59,0.12)", background: "rgba(12,14,10,0.6)", backdropFilter: "blur(12px)",
+        width: "100%", padding: "1.25rem 2rem", display: "flex", alignItems: "center", justifyContent: "space-between",
+        borderBottom: "1px solid var(--border)", background: "rgba(12, 14, 10, 0.4)", backdropFilter: "blur(20px)",
         position: "sticky", top: 0, zIndex: 10,
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
-          <div style={{ width: 32, height: 32, background: "linear-gradient(135deg,#5d7047,#4E5F3B)", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem" }}>
-            ⚔️
+          <div style={{ width: 34, height: 34, background: "var(--accent)", color: "#fff", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <Activity size={18} strokeWidth={2.5} />
           </div>
-          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, fontSize: "1rem", color: "#cdd5c5", letterSpacing: "-0.02em" }}>
+          <span style={{ fontFamily: "'Inter', sans-serif", fontWeight: 700, fontSize: "1.1rem", color: "var(--text)", letterSpacing: "-0.02em" }}>
             ClubTrack
           </span>
         </div>
-        <div style={{ display: "flex", gap: "0.6rem" }}>
+        <div style={{ display: "flex", gap: "0.75rem" }}>
           <button
             onClick={() => { enterAsGuest(); router.push("/ops"); }}
-            style={{ background: "transparent", border: "1px solid rgba(78,95,59,0.3)", borderRadius: 8, padding: "0.45rem 1rem", color: "rgba(160,180,130,0.7)", fontSize: "0.82rem", cursor: "pointer", fontFamily: "'Inter', sans-serif", transition: "all 0.2s" }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(78,95,59,0.6)"; e.currentTarget.style.color = "rgba(160,180,130,1)"; }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(78,95,59,0.3)"; e.currentTarget.style.color = "rgba(160,180,130,0.7)"; }}
+            className="btn-outline"
+            style={{ padding: "0.5rem 1.1rem", border: "1px solid var(--border)", color: "var(--text)" }}
           >
             Browse
           </button>
           <button
             onClick={() => router.push("/login")}
-            style={{ background: "#4E5F3B", border: "none", borderRadius: 8, padding: "0.45rem 1.1rem", color: "#e8eddf", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif", transition: "all 0.2s" }}
-            onMouseEnter={e => { e.currentTarget.style.background = "#5d7047"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "#4E5F3B"; }}
+            className="btn-amber"
+            style={{ padding: "0.5rem 1.1rem" }}
           >
             Sign In
           </button>
@@ -126,47 +117,47 @@ export default function LandingPage() {
       {/* Main content */}
       <div style={{
         flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-        gap: "3rem", padding: "4rem 1.5rem 5rem", zIndex: 2, width: "100%", maxWidth: "720px", margin: "0 auto", textAlign: "center",
+        gap: "3.5rem", padding: "4rem 1.5rem 6rem", zIndex: 2, width: "100%", maxWidth: "760px", margin: "0 auto", textAlign: "center",
       }}>
 
         {/* Hero headline */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.65 }}
-          style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "1rem" }}
+          transition={{ duration: 0.65, ease: "easeOut" }}
+          style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "1.2rem" }}
         >
-          <div style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", background: "rgba(78,95,59,0.1)", border: "1px solid rgba(78,95,59,0.25)", borderRadius: 999, padding: "0.3rem 1rem", marginBottom: "0.5rem" }}>
-            <span style={{ fontSize: "0.65rem", fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, letterSpacing: "0.18em", color: "#4E5F3B", textTransform: "uppercase" }}>
-              SSB Aspirant Platform
+          <div style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 999, padding: "0.4rem 1.1rem", marginBottom: "0.5rem" }}>
+            <span style={{ fontSize: "0.7rem", fontFamily: "'Inter', sans-serif", fontWeight: 600, letterSpacing: "0.08em", color: "var(--text-sub)", textTransform: "uppercase" }}>
+              Performance Tracking Platform
             </span>
           </div>
           <h1 style={{
-            fontSize: "clamp(2.2rem, 6vw, 3.5rem)", fontWeight: 800, color: "#cdd5c5",
-            lineHeight: 1.15, letterSpacing: "-0.03em", margin: 0,
-            fontFamily: "'Inter', system-ui, sans-serif",
+            fontSize: "clamp(2.5rem, 6vw, 4rem)", fontWeight: 800, color: "var(--text)",
+            lineHeight: 1.1, letterSpacing: "-0.04em", margin: 0,
           }}>
-            Track your preparation,<br />
-            <span style={{ color: "#4E5F3B" }}>earn your commission.</span>
+            Track your progress.<br />
+            <span style={{ color: "var(--accent)" }}>Master your routine.</span>
           </h1>
-          <p style={{ fontSize: "1rem", color: "rgba(185,200,170,0.6)", lineHeight: 1.75, maxWidth: 500, margin: 0 }}>
-            Complete daily tasks across your squads, earn points, and track your progress alongside fellow aspirants — all in one place.
+          <p style={{ fontSize: "1.05rem", color: "var(--text-muted)", lineHeight: 1.6, maxWidth: 540, margin: 0 }}>
+            Complete daily tasks, earn points, and climb the leaderboard alongside a dedicated community. Build the habits that lead to success.
           </p>
         </motion.div>
 
         {/* Quote Card */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.96 }}
+          initial={{ opacity: 0, scale: 0.98 }}
           animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.65, delay: 0.2 }}
+          transition={{ duration: 0.65, delay: 0.2, ease: "easeOut" }}
           style={{
-            width: "100%", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(78,95,59,0.22)",
-            borderRadius: 18, padding: "2rem 2.25rem 1.75rem", backdropFilter: "blur(16px)",
-            boxShadow: "0 12px 48px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04)",
+            width: "100%", background: "var(--surface)", border: "1px solid var(--border)",
+            borderRadius: "var(--radius)", padding: "2.5rem 2.5rem 2rem",
+            boxShadow: "var(--shadow-md), inset 0 1px 0 rgba(255,255,255,0.04)",
             minHeight: 180, display: "flex", flexDirection: "column", alignItems: "center",
+            position: "relative", overflow: "hidden"
           }}
         >
-          <div style={{ fontFamily: "Georgia, serif", fontSize: "4rem", lineHeight: 0.6, color: "#4E5F3B", opacity: 0.25, alignSelf: "flex-start", userSelect: "none", marginBottom: "0.5rem" }}>"</div>
+          <div style={{ position: "absolute", top: -15, left: 15, fontFamily: "Georgia, serif", fontSize: "7rem", lineHeight: 1, color: "var(--accent)", opacity: 0.08, userSelect: "none" }}>"</div>
 
           <AnimatePresence mode="wait">
             {visible && (
@@ -175,17 +166,17 @@ export default function LandingPage() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.38 }}
-                style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "1rem" }}
+                transition={{ duration: 0.35 }}
+                style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "1.2rem", position: "relative", zIndex: 1 }}
               >
-                <p style={{ fontSize: "1rem", fontWeight: 500, color: "#b8c4af", lineHeight: 1.8, letterSpacing: "0.01em", margin: 0, fontStyle: "italic" }}>
-                  {quote.text}
+                <p style={{ fontSize: "1.1rem", fontWeight: 500, color: "var(--text)", lineHeight: 1.6, margin: 0, fontStyle: "italic", maxWidth: "90%" }}>
+                  "{quote.text}"
                 </p>
                 <div>
-                  <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "0.73rem", fontWeight: 700, color: "#4E5F3B", margin: 0, letterSpacing: "0.04em" }}>
-                    — {quote.author}
+                  <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.85rem", fontWeight: 600, color: "var(--accent)", margin: 0 }}>
+                    {quote.author}
                   </p>
-                  <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "0.62rem", color: "rgba(78,95,59,0.55)", margin: "0.2rem 0 0", letterSpacing: "0.04em" }}>
+                  <p style={{ fontSize: "0.7rem", color: "var(--text-muted)", margin: "0.2rem 0 0", fontWeight: 500 }}>
                     {quote.title}
                   </p>
                 </div>
@@ -194,12 +185,13 @@ export default function LandingPage() {
           </AnimatePresence>
 
           {/* Dots */}
-          <div style={{ display: "flex", gap: "0.4rem", marginTop: "1.5rem" }}>
+          <div style={{ display: "flex", gap: "0.4rem", marginTop: "2rem", zIndex: 1 }}>
             {QUOTES.map((_, i) => (
               <button
                 key={i}
                 onClick={() => { setVisible(false); setTimeout(() => { setQuoteIdx(i); setVisible(true); }, 300); }}
-                style={{ width: i === quoteIdx ? 20 : 6, height: 6, borderRadius: 9999, background: i === quoteIdx ? "#4E5F3B" : "rgba(78,95,59,0.22)", border: "none", cursor: "pointer", padding: 0, transition: "all 0.25s" }}
+                style={{ width: i === quoteIdx ? 24 : 6, height: 6, borderRadius: 9999, background: i === quoteIdx ? "var(--accent)" : "var(--border-dark)", border: "none", cursor: "pointer", padding: 0, transition: "all 0.3s ease" }}
+                aria-label={`Go to quote ${i + 1}`}
               />
             ))}
           </div>
@@ -207,14 +199,14 @@ export default function LandingPage() {
 
         {/* Feature pills */}
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.5, delay: 0.4 }}
-          style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap", justifyContent: "center" }}
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.35 }}
+          style={{ display: "flex", gap: "0.8rem", flexWrap: "wrap", justifyContent: "center" }}
         >
           {FEATURES.map((f) => (
-            <span key={f.label} style={{ fontSize: "0.78rem", fontWeight: 500, color: "rgba(160,180,130,0.6)", background: "rgba(78,95,59,0.08)", border: "1px solid rgba(78,95,59,0.18)", borderRadius: 9999, padding: "0.3rem 0.9rem", display: "flex", alignItems: "center", gap: "0.4rem" }}>
-              {f.icon} {f.label}
+            <span key={f.label} style={{ fontSize: "0.85rem", fontWeight: 500, color: "var(--text)", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 9999, padding: "0.45rem 1.1rem", display: "flex", alignItems: "center", gap: "0.5rem", boxShadow: "var(--shadow-sm)" }}>
+              <span style={{ color: "var(--accent)", display: "flex" }}>{f.icon}</span> {f.label}
             </span>
           ))}
         </motion.div>
@@ -223,31 +215,26 @@ export default function LandingPage() {
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.55, delay: 0.55 }}
-          style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.75rem" }}
+          transition={{ duration: 0.55, delay: 0.5 }}
+          style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "1rem", marginTop: "1rem" }}
         >
           <button
-            id="get-started-btn"
-            onMouseEnter={() => setHovered(true)}
-            onMouseLeave={() => setHovered(false)}
             onClick={() => router.push("/login")}
+            className="btn-amber"
             style={{
-              background: hovered ? "linear-gradient(135deg,#5d7047,#4E5F3B)" : "linear-gradient(135deg,#4E5F3B,#3a472c)",
-              color: "#e8eddf", border: "none", borderRadius: 12, padding: "1rem 2.4rem",
-              fontFamily: "'Inter', sans-serif", fontSize: "1rem", fontWeight: 700, cursor: "pointer",
-              display: "inline-flex", alignItems: "center", gap: "0.6rem", transition: "all 0.2s",
-              boxShadow: hovered ? "0 0 40px rgba(78,95,59,0.5), 0 8px 28px rgba(0,0,0,0.4)" : "0 0 20px rgba(78,95,59,0.2), 0 4px 16px rgba(0,0,0,0.35)",
-              transform: hovered ? "translateY(-2px)" : "none",
+              padding: "1rem 2.8rem",
+              fontSize: "1.05rem", fontWeight: 600,
+              boxShadow: "0 0 30px var(--accent-light), 0 8px 20px rgba(0,0,0,0.2)",
+              transform: "translateY(0)",
             }}
           >
-            Get Started
-            <span style={{ fontSize: "0.95rem", transition: "transform 0.2s", transform: hovered ? "translateX(4px)" : "none", display: "inline-block" }}>→</span>
+            Get Started <ArrowRight size={18} style={{ marginLeft: "0.4rem" }}/>
           </button>
           <button
             onClick={() => { enterAsGuest(); router.push("/ops"); }}
-            style={{ background: "none", border: "none", color: "rgba(160,180,130,0.4)", fontSize: "0.8rem", cursor: "pointer", fontFamily: "'Inter', sans-serif", transition: "color 0.2s", padding: 0 }}
-            onMouseEnter={e => (e.currentTarget.style.color = "rgba(160,180,130,0.7)")}
-            onMouseLeave={e => (e.currentTarget.style.color = "rgba(160,180,130,0.4)")}
+            style={{ background: "none", border: "none", color: "var(--text-muted)", fontSize: "0.85rem", cursor: "pointer", fontWeight: 500, transition: "color 0.2s", padding: "0.5rem" }}
+            onMouseEnter={e => (e.currentTarget.style.color = "var(--text)")}
+            onMouseLeave={e => (e.currentTarget.style.color = "var(--text-muted)")}
           >
             Continue as Guest →
           </button>
@@ -255,9 +242,9 @@ export default function LandingPage() {
       </div>
 
       {/* Footer */}
-      <footer style={{ width: "100%", padding: "0.75rem 2rem", borderTop: "1px solid rgba(78,95,59,0.12)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2 }}>
-        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "0.58rem", color: "rgba(78,95,59,0.35)", letterSpacing: "0.1em", textTransform: "uppercase" }}>
-          ClubTrack · SSB Aspirant Tracker · India
+      <footer style={{ width: "100%", padding: "1.5rem 2rem", borderTop: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2 }}>
+        <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 500 }}>
+          © {new Date().getFullYear()} ClubTrack
         </span>
       </footer>
     </div>
