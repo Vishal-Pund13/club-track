@@ -59,18 +59,19 @@ interface AuthState {
 interface AuthContextValue extends AuthState {
   login: (mobileOrEmail: string, password: string) => Promise<{ ok: boolean; error?: string }>;
   sendOtp: (
-    mobile: string,
+    email: string,
     options?: {
       name?: string;
+      mobile?: string;
       city?: string;
       aspirantType?: AspirantType;
       role?: "aspirant" | "admin";
     }
   ) => Promise<{ ok: boolean; error?: string }>;
   verifyOtp: (
-    mobile: string,
+    email: string,
     otp: string,
-    registrationData?: { name: string; city: string; aspirantType: AspirantType }
+    registrationData?: { name: string; mobile: string; city: string; aspirantType: AspirantType }
   ) => Promise<{ ok: boolean; error?: string }>;
   setPassword: (password: string) => Promise<{ ok: boolean; error?: string }>;
   logout: () => Promise<void>;
@@ -284,84 +285,74 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const sendOtp: AuthContextValue["sendOtp"] = async (mobile, options) => {
-    const cleanMobile = mobile.trim();
-    const digits = cleanMobile.replace(/\D/g, "");
-    if (digits.length !== 10) return { ok: false, error: "Mobile number must be exactly 10 digits." };
-
-    if (!isSupabaseConfigured || !supabase) {
-      return { ok: false, error: "Supabase is not configured. Phone OTP login is unavailable." };
+  const sendOtp: AuthContextValue["sendOtp"] = async (email, options) => {
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail.includes("@") || !cleanEmail.includes(".")) {
+      return { ok: false, error: "Enter a valid email address." };
     }
 
-    const phone = formatIndianMobileToE164(cleanMobile);
+    if (!isSupabaseConfigured || !supabase) {
+      return { ok: false, error: "Supabase is not configured. Email OTP is unavailable." };
+    }
+
     const initials = options?.name ? makeInitials(options.name) : undefined;
-    const role = options?.role ?? "aspirant";
 
     const { error } = await supabase.auth.signInWithOtp({
-      phone,
-      options: options
-        ? {
-            data: {
-              ...(options.name ? { name: options.name } : {}),
-              ...(initials ? { initials } : {}),
-              mobile: cleanMobile,
-              ...(options.city ? { city: options.city } : {}),
-              ...(options.aspirantType ? { aspirant_type: options.aspirantType } : {}),
-              role,
-            },
-          }
-        : undefined,
+      email: cleanEmail,
+      options: {
+        shouldCreateUser: true,
+        data: {
+          ...(options?.name ? { name: options.name } : {}),
+          ...(initials ? { initials } : {}),
+          ...(options?.mobile ? { mobile: options.mobile } : {}),
+          ...(options?.city ? { city: options.city } : {}),
+          ...(options?.aspirantType ? { aspirant_type: options.aspirantType } : {}),
+          role: options?.role ?? "aspirant",
+        },
+      },
     });
 
     if (error) return { ok: false, error: error.message };
     return { ok: true };
   };
 
-  const verifyOtp: AuthContextValue["verifyOtp"] = async (mobile, otp, registrationData) => {
-    const cleanMobile = mobile.trim();
-    const digits = cleanMobile.replace(/\D/g, "");
-    if (digits.length !== 10) return { ok: false, error: "Mobile number must be exactly 10 digits." };
+  const verifyOtp: AuthContextValue["verifyOtp"] = async (email, otp, registrationData) => {
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail.includes("@")) return { ok: false, error: "Enter a valid email address." };
     if (!otp.trim()) return { ok: false, error: "Enter the 6-digit OTP." };
 
     if (!isSupabaseConfigured || !supabase) {
-      return { ok: false, error: "Supabase is not configured. Phone OTP login is unavailable." };
+      return { ok: false, error: "Supabase is not configured. Email OTP is unavailable." };
     }
 
     setLoading(true);
     try {
-      const phone = formatIndianMobileToE164(cleanMobile);
       const { data, error } = await supabase.auth.verifyOtp({
-        type: "sms",
-        phone,
+        type: "email",
+        email: cleanEmail,
         token: otp.trim(),
       });
 
       if (error) return { ok: false, error: error.message };
 
       if (data.user) {
-        // If this was registration, ensure profile exists/updated
         if (registrationData) {
           const initials = makeInitials(registrationData.name);
+          // Store mobile in internal email format for password login later
+          const internalEmail = mobileToInternalEmail(registrationData.mobile);
           const { error: upsertError } = await supabase.from("profiles").upsert({
             id: data.user.id,
             name: registrationData.name,
             initials,
-            mobile: cleanMobile,
+            mobile: registrationData.mobile,
             city: registrationData.city,
             aspirant_type: registrationData.aspirantType,
             role: "aspirant",
           });
           if (upsertError) return { ok: false, error: upsertError.message };
-
-          // Best-effort: set internal email so password login works later (may require email confirmations disabled)
-          const { data: sessionData } = await supabase.auth.getSession();
-          const existingEmail = sessionData.session?.user?.email;
-          const desiredEmail = mobileToInternalEmail(cleanMobile);
-          if (!existingEmail) {
-            try { await supabase.auth.updateUser({ email: desiredEmail }); } catch { /* ignore */ }
-          }
+          // Best-effort: link internal mobile email alias for password login
+          try { await supabase.auth.updateUser({ email: internalEmail }); } catch { /* ignore if fails */ }
         }
-
         await loadProfileAndTodos(data.user.id);
       }
 
