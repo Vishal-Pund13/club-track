@@ -387,7 +387,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     if (isSupabaseConfigured && supabase) {
-      await supabase.auth.signOut();
+      try {
+        await supabase.auth.signOut();
+      } catch (e) {
+        console.error("Supabase signout failed:", e);
+      }
     }
     setUser(null); setIsGuest(false);
     ls_saveSession(null);

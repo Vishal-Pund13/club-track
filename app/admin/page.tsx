@@ -268,7 +268,7 @@ export default function AdminPage() {
         tabs = [
             { id: "overview", label: "Overview", icon: <ClipboardCheck size={15}/> },
             { id: "missions", label: "Tasks", icon: <ListTodo size={15}/> },
-            ...(!isMobile ? [{ id: "deploy" as AdminTab, label: "Post Task", icon: <Plus size={15}/> }] : []),
+            { id: "deploy", label: "Post Task", icon: <Plus size={15}/> },
             { id: "roster", label: "Members", icon: <Users size={15}/> },
             { id: "verify", label: "Verify", icon: <Shield size={15}/>, badge: pendingVerifs.length },
             { id: "captains", label: "Captains", icon: <UserPlus size={15}/> },
@@ -517,7 +517,7 @@ export default function AdminPage() {
                     )}
 
                     {/* ════════════════ DEPLOY ══════════════════════════════════ */}
-                    {activeTab === "deploy" && !isMobile && (
+                    {activeTab === "deploy" && (
                         <motion.div key="deploy" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }} style={{ maxWidth: 480 }}>
                             <div className="card">
                                 <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
