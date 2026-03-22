@@ -9,7 +9,7 @@ export default function LoginPage() {
   const router = useRouter();
   const { login, enterAsGuest } = useAuth();
 
-  const [mobile, setMobile] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -20,12 +20,12 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
     try {
-      const result = await login(mobile, password);
+      const result = await login(identifier, password);
       if (!result.ok) return setError(result.error || "Login failed.");
-      router.push("/ops");
+      router.push(mode === "admin" ? "/admin" : "/ops");
     } catch (err) {
       console.error(err);
-      setError("A tactical error occurred.");
+      setError("An error occurred. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -39,24 +39,23 @@ export default function LoginPage() {
   const inputStyle: React.CSSProperties = {
     width: "100%",
     background: "rgba(255,255,255,0.04)",
-    border: "1px solid rgba(78,95,59,0.3)",
-    borderRadius: 8,
-    padding: "0.75rem 1rem",
+    border: "1px solid rgba(78,95,59,0.25)",
+    borderRadius: 10,
+    padding: "0.8rem 1rem",
     fontFamily: "'Inter', sans-serif",
     fontSize: "0.9rem",
     color: "#cdd5c5",
     outline: "none",
     transition: "border-color 0.2s",
+    boxSizing: "border-box",
   };
 
   const labelStyle: React.CSSProperties = {
-    fontFamily: "'JetBrains Mono', monospace",
-    fontSize: "0.62rem",
-    fontWeight: 700,
-    letterSpacing: "0.18em",
-    color: "#4E5F3B",
-    textTransform: "uppercase",
-    marginBottom: "0.4rem",
+    fontFamily: "'Inter', sans-serif",
+    fontSize: "0.78rem",
+    fontWeight: 600,
+    color: "rgba(185,200,170,0.65)",
+    marginBottom: "0.45rem",
     display: "block",
   };
 
@@ -64,7 +63,7 @@ export default function LoginPage() {
     <div
       style={{
         minHeight: "100vh",
-        background: "#0c0e0a",
+        background: "linear-gradient(160deg, #0c0e0a 0%, #101410 50%, #0e100c 100%)",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
@@ -75,66 +74,69 @@ export default function LoginPage() {
         fontFamily: "'Inter', system-ui, sans-serif",
       }}
     >
-      {/* Grid BG */}
-      <div style={{ position: "absolute", inset: 0, backgroundImage: "linear-gradient(rgba(78,95,59,0.06) 1px,transparent 1px),linear-gradient(90deg,rgba(78,95,59,0.06) 1px,transparent 1px)", backgroundSize: "44px 44px", pointerEvents: "none" }} />
-      <div style={{ position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)", width: "80vw", height: "40vh", background: "radial-gradient(ellipse at 50% 0%,rgba(78,95,59,0.18) 0%,transparent 70%)", pointerEvents: "none" }} />
+      {/* Glow */}
+      <div style={{ position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)", width: "80vw", height: "45vh", background: "radial-gradient(ellipse at 50% 0%, rgba(78,95,59,0.15) 0%, transparent 70%)", pointerEvents: "none" }} />
 
       <motion.div
         initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.55 }}
+        transition={{ duration: 0.5 }}
         style={{
           width: "100%",
-          maxWidth: 440,
-          background: "rgba(255,255,255,0.025)",
-          border: "1px solid rgba(78,95,59,0.25)",
-          borderRadius: 16,
-          padding: "2.5rem 2rem",
-          boxShadow: "0 8px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04)",
+          maxWidth: 420,
+          background: "rgba(255,255,255,0.03)",
+          border: "1px solid rgba(78,95,59,0.22)",
+          borderRadius: 20,
+          padding: "2.5rem 2.25rem",
+          boxShadow: "0 12px 48px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.04)",
           position: "relative",
           zIndex: 2,
+          backdropFilter: "blur(16px)",
         }}
       >
-        {/* Corner accents */}
-        <div style={{ position: "absolute", top: 12, left: 16, width: 12, height: 12, borderTop: "1.5px solid rgba(78,95,59,0.5)", borderLeft: "1.5px solid rgba(78,95,59,0.5)" }} />
-        <div style={{ position: "absolute", top: 12, right: 16, width: 12, height: 12, borderTop: "1.5px solid rgba(78,95,59,0.5)", borderRight: "1.5px solid rgba(78,95,59,0.5)" }} />
-        <div style={{ position: "absolute", bottom: 12, left: 16, width: 12, height: 12, borderBottom: "1.5px solid rgba(78,95,59,0.5)", borderLeft: "1.5px solid rgba(78,95,59,0.5)" }} />
-        <div style={{ position: "absolute", bottom: 12, right: 16, width: 12, height: 12, borderBottom: "1.5px solid rgba(78,95,59,0.5)", borderRight: "1.5px solid rgba(78,95,59,0.5)" }} />
+        {/* Back link */}
+        <button
+          onClick={() => router.push("/")}
+          style={{ background: "none", border: "none", color: "rgba(78,95,59,0.6)", fontSize: "0.78rem", cursor: "pointer", fontFamily: "'Inter', sans-serif", padding: 0, marginBottom: "1.5rem", display: "flex", alignItems: "center", gap: "0.3rem", transition: "color 0.2s" }}
+          onMouseEnter={e => e.currentTarget.style.color = "#4E5F3B"}
+          onMouseLeave={e => e.currentTarget.style.color = "rgba(78,95,59,0.6)"}
+        >
+          ← Back
+        </button>
 
         {/* Header */}
-        <div style={{ textAlign: "center", marginBottom: "2rem" }}>
-          <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>⚔️</div>
-          <h1 style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "1.35rem", fontWeight: 700, color: "#cdd5c5", margin: 0, letterSpacing: "-0.02em" }}>
-            Report for Duty
+        <div style={{ marginBottom: "2rem" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", marginBottom: "0.35rem" }}>
+            <div style={{ width: 30, height: 30, background: "linear-gradient(135deg,#5d7047,#4E5F3B)", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.9rem" }}>
+              ⚔️
+            </div>
+            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, fontSize: "1rem", color: "#cdd5c5" }}>ClubTrack</span>
+          </div>
+          <h1 style={{ fontFamily: "'Inter', sans-serif", fontSize: "1.5rem", fontWeight: 700, color: "#cdd5c5", margin: 0, letterSpacing: "-0.02em" }}>
+            Welcome back
           </h1>
-          <p style={{ fontSize: "0.82rem", color: "rgba(160,180,130,0.5)", marginTop: "0.35rem" }}>
-            Authenticate your identity to access Command Center
+          <p style={{ fontSize: "0.83rem", color: "rgba(160,180,130,0.5)", marginTop: "0.3rem" }}>
+            Sign in to your account to continue
           </p>
         </div>
-        {/* Tabs */}
-        <div style={{ display: "flex", background: "rgba(0,0,0,0.2)", borderRadius: 10, padding: 4, marginBottom: "2rem" }}>
-          <button
-            onClick={() => setMode("aspirant")}
-            style={{
-              flex: 1, padding: "0.6rem", border: "none", borderRadius: 8, fontSize: "0.75rem", fontWeight: 700, fontFamily: "'JetBrains Mono', monospace",
-              background: mode === "aspirant" ? "#4E5F3B" : "transparent",
-              color: mode === "aspirant" ? "#e8eddf" : "rgba(78,95,59,0.6)",
-              cursor: "pointer", transition: "all 0.2s"
-            }}
-          >
-            🪖 ASPIRANT
-          </button>
-          <button
-            onClick={() => setMode("admin")}
-            style={{
-              flex: 1, padding: "0.6rem", border: "none", borderRadius: 8, fontSize: "0.75rem", fontWeight: 700, fontFamily: "'JetBrains Mono', monospace",
-              background: mode === "admin" ? "#4E5F3B" : "transparent",
-              color: mode === "admin" ? "#e8eddf" : "rgba(78,95,59,0.6)",
-              cursor: "pointer", transition: "all 0.2s"
-            }}
-          >
-            ⚔️ COMMANDER
-          </button>
+
+        {/* Role toggle */}
+        <div style={{ display: "flex", background: "rgba(0,0,0,0.25)", borderRadius: 10, padding: 3, marginBottom: "1.75rem" }}>
+          {(["aspirant", "admin"] as const).map((m) => (
+            <button
+              key={m}
+              onClick={() => setMode(m)}
+              style={{
+                flex: 1, padding: "0.55rem", border: "none", borderRadius: 8,
+                fontSize: "0.78rem", fontWeight: 600, fontFamily: "'Inter', sans-serif",
+                background: mode === m ? "#4E5F3B" : "transparent",
+                color: mode === m ? "#e8eddf" : "rgba(160,180,130,0.5)",
+                cursor: "pointer", transition: "all 0.2s", textTransform: "capitalize",
+              }}
+            >
+              {m === "aspirant" ? "Aspirant" : "Admin"}
+            </button>
+          ))}
         </div>
 
         {/* Error */}
@@ -144,76 +146,91 @@ export default function LoginPage() {
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: "auto" }}
               exit={{ opacity: 0, height: 0 }}
-              style={{ background: "rgba(220,50,50,0.12)", border: "1px solid rgba(220,50,50,0.3)", borderRadius: 8, padding: "0.65rem 1rem", marginBottom: "1rem", fontSize: "0.82rem", color: "#f87171" }}
+              style={{ background: "rgba(220,50,50,0.1)", border: "1px solid rgba(220,50,50,0.28)", borderRadius: 8, padding: "0.65rem 1rem", marginBottom: "1rem", fontSize: "0.82rem", color: "#f87171", overflow: "hidden" }}
             >
               ⚠ {error}
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Password login form */}
-        <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: "1.1rem" }}>
-            <div>
-              <label style={labelStyle}>{mode === "admin" ? "Admin Identifier" : "Mobile Number"}</label>
-              <input
-                type="text"
-                placeholder={mode === "admin" ? "Enter admin email" : "10-digit mobile number"}
-                value={mobile}
-                onChange={(e) => setMobile(e.target.value)}
-                required
-                style={inputStyle}
-                onFocus={(e) => (e.target.style.borderColor = "#4E5F3B")}
-                onBlur={(e) => (e.target.style.borderColor = "rgba(78,95,59,0.3)")}
-              />
-            </div>
-            <div>
-              <label style={labelStyle}>Password</label>
-              <input
-                type="password"
-                placeholder="Enter your password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                style={inputStyle}
-                onFocus={(e) => (e.target.style.borderColor = "#4E5F3B")}
-                onBlur={(e) => (e.target.style.borderColor = "rgba(78,95,59,0.3)")}
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={loading}
-              style={{ background: "#4E5F3B", color: "#e8eddf", border: "none", borderRadius: 8, padding: "0.85rem", fontFamily: "'Inter', sans-serif", fontSize: "0.95rem", fontWeight: 700, cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.7 : 1, transition: "all 0.2s", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}
-            >
-              {loading ? "Authenticating…" : "🎯 Authenticate & Deploy"}
-            </button>
+        {/* Form */}
+        <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+          <div>
+            <label style={labelStyle}>
+              {mode === "admin" ? "Admin Email" : "Mobile Number"}
+            </label>
+            <input
+              type="text"
+              placeholder={mode === "admin" ? "admin@clubtrack.app" : "10-digit mobile number"}
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
+              required
+              style={inputStyle}
+              onFocus={(e) => (e.target.style.borderColor = "rgba(78,95,59,0.7)")}
+              onBlur={(e) => (e.target.style.borderColor = "rgba(78,95,59,0.25)")}
+            />
+          </div>
+          <div>
+            <label style={labelStyle}>Password</label>
+            <input
+              type="password"
+              placeholder="Enter your password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              style={inputStyle}
+              onFocus={(e) => (e.target.style.borderColor = "rgba(78,95,59,0.7)")}
+              onBlur={(e) => (e.target.style.borderColor = "rgba(78,95,59,0.25)")}
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={loading}
+            style={{
+              background: loading ? "rgba(78,95,59,0.5)" : "#4E5F3B",
+              color: "#e8eddf", border: "none", borderRadius: 10, padding: "0.88rem",
+              fontFamily: "'Inter', sans-serif", fontSize: "0.95rem", fontWeight: 700,
+              cursor: loading ? "not-allowed" : "pointer", transition: "all 0.2s",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem",
+              marginTop: "0.25rem",
+            }}
+            onMouseEnter={e => { if (!loading) e.currentTarget.style.background = "#5d7047"; }}
+            onMouseLeave={e => { if (!loading) e.currentTarget.style.background = "#4E5F3B"; }}
+          >
+            {loading ? "Signing in…" : "Sign In"}
+          </button>
 
-            <div style={{ textAlign: "center", fontSize: "0.82rem", color: "rgba(160,180,130,0.5)" }}>
-              Not enlisted yet?{" "}
-              <button type="button" onClick={() => router.push("/enlist")} style={{ background: "none", border: "none", color: "#4E5F3B", fontWeight: 600, cursor: "pointer", fontSize: "0.82rem", padding: 0 }}>
-                Enlist Now →
-              </button>
-            </div>
-          </form>
+          <div style={{ textAlign: "center", fontSize: "0.82rem", color: "rgba(160,180,130,0.45)" }}>
+            New here?{" "}
+            <button
+              type="button"
+              onClick={() => router.push("/enlist")}
+              style={{ background: "none", border: "none", color: "#4E5F3B", fontWeight: 600, cursor: "pointer", fontSize: "0.82rem", padding: 0 }}
+            >
+              Create account →
+            </button>
+          </div>
+        </form>
 
         {/* Divider */}
         <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", margin: "1.5rem 0" }}>
-          <div style={{ flex: 1, height: 1, background: "rgba(78,95,59,0.2)" }} />
-          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "0.6rem", color: "rgba(78,95,59,0.5)", letterSpacing: "0.1em" }}>OR</span>
-          <div style={{ flex: 1, height: 1, background: "rgba(78,95,59,0.2)" }} />
+          <div style={{ flex: 1, height: 1, background: "rgba(78,95,59,0.18)" }} />
+          <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.72rem", color: "rgba(78,95,59,0.45)" }}>or</span>
+          <div style={{ flex: 1, height: 1, background: "rgba(78,95,59,0.18)" }} />
         </div>
 
         <button
           onClick={handleGuest}
-          style={{ width: "100%", background: "transparent", border: "1px solid rgba(78,95,59,0.2)", borderRadius: 8, padding: "0.75rem", color: "rgba(160,180,130,0.55)", fontFamily: "'Inter', sans-serif", fontSize: "0.85rem", cursor: "pointer", transition: "all 0.2s" }}
-          onMouseEnter={(e) => { e.currentTarget.style.borderColor = "rgba(78,95,59,0.4)"; e.currentTarget.style.color = "rgba(160,180,130,0.8)"; }}
-          onMouseLeave={(e) => { e.currentTarget.style.borderColor = "rgba(78,95,59,0.2)"; e.currentTarget.style.color = "rgba(160,180,130,0.55)"; }}
+          style={{
+            width: "100%", background: "transparent", border: "1px solid rgba(78,95,59,0.18)",
+            borderRadius: 10, padding: "0.75rem", color: "rgba(160,180,130,0.5)",
+            fontFamily: "'Inter', sans-serif", fontSize: "0.85rem", cursor: "pointer", transition: "all 0.2s",
+          }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(78,95,59,0.38)"; e.currentTarget.style.color = "rgba(160,180,130,0.8)"; }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(78,95,59,0.18)"; e.currentTarget.style.color = "rgba(160,180,130,0.5)"; }}
         >
-          👁 Observe as Civilian (Guest)
+          Continue as Guest
         </button>
-
-        <p style={{ textAlign: "center", fontSize: "0.72rem", color: "rgba(78,95,59,0.4)", marginTop: "1.25rem", fontFamily: "'JetBrains Mono', monospace", letterSpacing: "0.05em" }}>
-          SECURED · SSB OPERATIONS · INDIA
-        </p>
       </motion.div>
     </div>
   );
