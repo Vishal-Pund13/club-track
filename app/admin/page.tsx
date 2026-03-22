@@ -160,6 +160,13 @@ export default function AdminPage() {
     const [expandedMission, setExpandedMission] = useState<string | null>(null);
     const [enrolledCount, setEnrolledCount] = useState(0);
     const [captainAssignments, setCaptainAssignments] = useState<CaptainAssignment[]>([]);
+    const [isMobile, setIsMobile] = useState(false);
+    useEffect(() => {
+        const check = () => setIsMobile(window.innerWidth < 768);
+        check();
+        window.addEventListener('resize', check);
+        return () => window.removeEventListener('resize', check);
+    }, []);
 
     useEffect(() => {
         try {
@@ -264,15 +271,15 @@ export default function AdminPage() {
     if (user?.role === "admin") {
         tabs = [
             { id: "overview", label: "Overview", icon: "📊" },
-            { id: "missions", label: "Missions", icon: "🎖" },
-            { id: "deploy", label: "Deploy", icon: "🎯" },
-            { id: "roster", label: "Roster", icon: "🪖" },
+            { id: "missions", label: "Tasks", icon: "✅" },
+            ...(!isMobile ? [{ id: "deploy" as AdminTab, label: "Post Task", icon: "➕" }] : []),
+            { id: "roster", label: "Members", icon: "👥" },
             { id: "verify", label: "Verify", icon: "🛡", badge: pendingVerifs.length },
             { id: "captains", label: "Captains", icon: "🎖️" },
         ];
     } else if ((authCaptainClubs || []).length > 0) {
         tabs = [
-            { id: "verify", label: "Verify", icon: "🛡", badge: pendingVerifs.length },
+            { id: "verify", label: "Verify Submissions", icon: "🛡", badge: pendingVerifs.length },
         ];
     }
 
@@ -288,19 +295,21 @@ export default function AdminPage() {
 
                 <main className="page-main">
                     {/* Header */}
-                    <div style={{ marginBottom: "2rem" }}>
+                    <div style={{ marginBottom: "1.75rem" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", marginBottom: "0.2rem" }}>
-                            <span style={{ fontSize: "1.4rem" }}>⚔️</span>
-                            <h1 style={{ margin: 0 }}>Armory Command</h1>
+                            <Shield size={20} style={{ color: "var(--amber)" }} />
+                            <h1 style={{ margin: 0, fontSize: "1.5rem" }}>
+                                {user?.role === "admin" ? "Admin Panel" : "Verification Centre"}
+                            </h1>
                         </div>
-                        <p style={{ fontSize: "0.8rem", color: "var(--text-muted)", margin: 0 }}>{dateLabel}</p>
+                        <p style={{ fontSize: "0.78rem", color: "var(--text-muted)", margin: 0 }}>{dateLabel}</p>
                     </div>
 
                     {/* Tab Bar */}
-                    <div className="tab-bar" style={{ marginBottom: "2rem" }}>
+                    <div className="tab-bar" style={{ marginBottom: "1.75rem", overflowX: "auto", flexShrink: 0, whiteSpace: "nowrap" }}>
                         {tabs.map(t => (
                             <button key={t.id} className={`tab ${activeTab === t.id ? "active" : ""}`}
-                                style={{ background: "none", border: "none", position: "relative" }} onClick={() => setActiveTab(t.id)}>
+                                style={{ background: "none", border: "none", position: "relative", flexShrink: 0 }} onClick={() => setActiveTab(t.id)}>
                                 {t.icon} {t.label}
                                 {t.badge && t.badge > 0 && (
                                     <span style={{
@@ -318,12 +327,12 @@ export default function AdminPage() {
                     {/* ════════════════ OVERVIEW ════════════════════════════════ */}
                     {activeTab === "overview" && (
                         <motion.div key="overview" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
-                            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(185px, 1fr))", gap: "1rem", marginBottom: "1.75rem" }}>
-                                <KpiCard icon="🪖" label="Operatives" value={state.users.length} sub={enrolledCount > 0 ? `+${enrolledCount} enlisted` : "Mock dataset"} />
-                                <KpiCard icon="🎯" label="Missions Today" value={todayTasks.length} sub={`${allTodayTasks.length - todayTasks.length} paused`} />
-                                <KpiCard icon="✅" label="Completion Rate" value={`${completionRate}%`} sub={`${totalDone} of ${totalPossible} done`} accent />
-                                <KpiCard icon="🏆" label="Top Operative" value={topPerformer?.name.split(" ")[0] ?? "—"} sub={topEntry ? `${topEntry[1]} pts today` : "No activity yet"} />
-                                <KpiCard icon="🛡" label="Pending Reviews" value={pendingVerifs.length} sub="Awaiting captain action" accent={pendingVerifs.length > 0} />
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "0.85rem", marginBottom: "1.75rem" }}>
+                                <KpiCard icon="👥" label="Members" value={state.users.length} sub={enrolledCount > 0 ? `+${enrolledCount} joined` : "Active members"} />
+                                <KpiCard icon="✅" label="Tasks Today" value={todayTasks.length} sub={`${allTodayTasks.length - todayTasks.length} paused`} />
+                                <KpiCard icon="📈" label="Completion" value={`${completionRate}%`} sub={`${totalDone} of ${totalPossible} done`} accent />
+                                <KpiCard icon="🏆" label="Top Member" value={topPerformer?.name.split(" ")[0] ?? "—"} sub={topEntry ? `${topEntry[1]} pts today` : "No activity yet"} />
+                                <KpiCard icon="🛡" label="Pending Reviews" value={pendingVerifs.length} sub="Awaiting review" accent={pendingVerifs.length > 0} />
                             </div>
 
                             {/* Pending alert */}
@@ -345,7 +354,7 @@ export default function AdminPage() {
                                     <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.75rem" }}>
                                         <span>⚠️</span>
                                         <span style={{ fontWeight: 600, fontSize: "0.875rem", color: "var(--text)" }}>
-                                            Needs Attention — {strugglingAspirants.length} operative{strugglingAspirants.length > 1 ? "s" : ""} with no missions today
+                                            Needs Attention — {strugglingAspirants.length} member{strugglingAspirants.length > 1 ? "s" : ""} with no tasks done today
                                         </span>
                                     </div>
                                     <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
@@ -393,9 +402,9 @@ export default function AdminPage() {
                             <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1.5rem" }}>
                                 <Shield size={18} style={{ color: "var(--amber)" }} />
                                 <div>
-                                    <div style={{ fontWeight: 600, color: "var(--text)" }}>Mission Verification Queue</div>
+                                    <div style={{ fontWeight: 600, color: "var(--text)" }}>Proof Verification Queue</div>
                                     <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
-                                        Review aspirant proof submissions before points are credited
+                                        Review submitted proofs before points are credited
                                     </div>
                                 </div>
                             </div>
@@ -403,7 +412,7 @@ export default function AdminPage() {
                             {pendingVerifs.length === 0 ? (
                                 <div style={{ textAlign: "center", padding: "3rem 1rem", border: "0.5px dashed var(--border)", borderRadius: 12, color: "var(--text-muted)" }}>
                                     <div style={{ fontSize: "2rem", marginBottom: "0.75rem" }}>✅</div>
-                                    <div style={{ fontWeight: 600, marginBottom: "0.25rem" }}>All clear, Captain!</div>
+                                    <div style={{ fontWeight: 600, marginBottom: "0.25rem" }}>All clear!</div>
                                     <div style={{ fontSize: "0.8rem" }}>No pending submissions right now.</div>
                                 </div>
                             ) : (
@@ -509,12 +518,12 @@ export default function AdminPage() {
                     )}
 
                     {/* ════════════════ DEPLOY ══════════════════════════════════ */}
-                    {activeTab === "deploy" && (
+                    {activeTab === "deploy" && !isMobile && (
                         <motion.div key="deploy" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }} style={{ maxWidth: 480 }}>
                             <div className="card">
-                                <h2 style={{ fontSize: "1rem", margin: "0 0 0.3rem" }}>🎯 Deploy Daily Mission</h2>
+                                <h2 style={{ fontSize: "1rem", margin: "0 0 0.3rem" }}>➕ Post a Task</h2>
                                 <p style={{ fontSize: "0.78rem", color: "var(--text-muted)", margin: "0 0 1.5rem" }}>
-                                    Deployed missions are immediately visible to all enrolled aspirants.
+                                    Posted tasks are immediately visible to all enrolled aspirants.
                                 </p>
 
                                 <form onSubmit={handleDeploy} style={{ display: "flex", flexDirection: "column", gap: "1.1rem" }}>
@@ -540,9 +549,7 @@ export default function AdminPage() {
                                     </div>
 
                                     <div>
-                                        <label style={{ display: "block", fontSize: "0.72rem", fontWeight: 700, color: "var(--text-sub)", marginBottom: "0.4rem", textTransform: "uppercase", letterSpacing: "0.07em" }}>
-                                            Intel Points — <span style={{ fontFamily: "'JetBrains Mono', monospace", color: "var(--amber)" }}>{form.pts}</span>
-                                        </label>
+                                        <label style={{ display: "block", fontSize: "0.72rem", fontWeight: 700, color: "var(--text-sub)", marginBottom: "0.4rem", textTransform: "uppercase", letterSpacing: "0.07em" }}>Points — <span style={{ fontFamily: "'JetBrains Mono', monospace", color: "var(--amber)" }}>{form.pts}</span></label>
                                         <input type="range" min={5} max={50} step={5} value={form.pts}
                                             onChange={e => setForm(f => ({ ...f, pts: Number(e.target.value) }))}
                                             style={{ width: "100%", accentColor: "var(--amber)" }} />
@@ -568,7 +575,7 @@ export default function AdminPage() {
 
                                     <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", paddingTop: "0.25rem" }}>
                                         <button type="submit" className="btn-amber">
-                                            <Plus size={14} /> Deploy Mission
+                                            <Plus size={14} /> Post Task
                                         </button>
                                         <AnimatePresence>
                                             {submitted && (
@@ -604,12 +611,12 @@ export default function AdminPage() {
                             <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginBottom: "1rem", fontWeight: 500 }}>
                                 showing {total === 0 ? 0 : start + 1} to {end} of {total} aspirants {"·"} sorted by approved pts
                             </div>
-                            <div style={{ display: "grid", gridTemplateColumns: "2rem 2.25rem 1fr 5rem 5rem 5.5rem", gap: "0.5rem", alignItems: "center", padding: "0.25rem 1rem", marginBottom: "0.4rem" }}>
+                            <div style={{ display: "grid", gridTemplateColumns: "2rem 2.25rem 1fr 4.5rem 4.5rem 5rem", gap: "0.5rem", alignItems: "center", padding: "0.25rem 1rem", marginBottom: "0.4rem" }}>
                                 <div /><div />
-                                <div style={{ fontSize: "0.67rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)" }}>Operative</div>
+                                <div style={{ fontSize: "0.67rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)" }}>Aspirant</div>
                                 <div style={{ fontSize: "0.67rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)", textAlign: "center" }}>Streak</div>
                                 <div style={{ fontSize: "0.67rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)", textAlign: "center" }}>Today</div>
-                                <div style={{ fontSize: "0.67rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)", textAlign: "center" }}>Total Pts</div>
+                                <div style={{ fontSize: "0.67rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)", textAlign: "center" }}>Points</div>
                             </div>
                             <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
                                 {pageUsers.map((user, i) => {
@@ -622,7 +629,7 @@ export default function AdminPage() {
 
                                     return (
                                         <div key={user.id} style={{
-                                            display: "grid", gridTemplateColumns: "2rem 2.25rem 1fr 5rem 5rem 5.5rem",
+                                            display: "grid", gridTemplateColumns: "2rem 2.25rem 1fr 4.5rem 4.5rem 5rem",
                                             gap: "0.5rem", alignItems: "center", padding: "0.75rem 1rem",
                                             background: isStruggling ? "rgba(248,113,113,0.04)" : "var(--surface)",
                                             border: `0.5px solid ${isStruggling ? "rgba(248,113,113,0.18)" : "var(--border)"}`,
@@ -656,20 +663,20 @@ export default function AdminPage() {
 
                             <div style={{ display: "flex", justifyContent: "center", gap: "0.6rem", marginTop: "1rem" }}>
                                 <button
-                                    className="btn-neutral"
+                                    className="btn-outline"
                                     onClick={() => setRosterPage(p => Math.max(0, p - 1))}
                                     disabled={!canPrev}
                                     style={{ opacity: canPrev ? 1 : 0.5, cursor: canPrev ? "pointer" : "not-allowed" }}
                                 >
-                                    Previous
+                                    ← Previous
                                 </button>
                                 <button
-                                    className="btn-neutral"
+                                    className="btn-outline"
                                     onClick={() => setRosterPage(p => p + 1)}
                                     disabled={!canNext}
                                     style={{ opacity: canNext ? 1 : 0.5, cursor: canNext ? "pointer" : "not-allowed" }}
                                 >
-                                    Next
+                                    Next →
                                 </button>
                             </div>
                                     </>

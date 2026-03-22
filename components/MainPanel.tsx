@@ -409,12 +409,12 @@ function ProgressBanner({ done, total, pts, streak, isGuest, isHistory, pending 
                 <div style={{ flex: 1 }}>
                     <div style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text)", marginBottom: isGuest ? 0 : "0.55rem" }}>
                         {isGuest
-                            ? "👁 Observing — Enlist to earn intel"
+                            ? "👁 Guest mode — sign in to track your progress"
                             : isHistory
-                                ? `${allDone ? "🎖" : "📅"} ${done} of ${total} missions completed`
+                                ? `${allDone ? "🎖" : "📅"} ${done} of ${total} tasks completed`
                                 : allDone
-                                    ? "🎖 All missions complete today!"
-                                    : `🎯 ${done} of ${total} done${total > 0 ? ` · ${pct}%` : ""}`}
+                                    ? "✅ All tasks done today — great work!"
+                                    : `📋 ${done} of ${total} done${total > 0 ? ` · ${pct}%` : ""}`}
                     </div>
                     {!isGuest && (
                         <>
@@ -425,7 +425,7 @@ function ProgressBanner({ done, total, pts, streak, isGuest, isHistory, pending 
                             </div>
                             <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginTop: "0.35rem", flexWrap: "wrap" }}>
                                 <span style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>
-                                    {pts} intel pts {isHistory ? "earned that day" : "earned today"}
+                                    {pts} pts {isHistory ? "earned that day" : "earned today"}
                                 </span>
                                 {pending > 0 && (
                                     <span style={{ fontSize: "0.65rem", background: "rgba(239,159,39,0.1)", border: "0.5px solid rgba(239,159,39,0.3)", borderRadius: 6, padding: "0.1rem 0.45rem", color: "var(--amber)", fontWeight: 600 }}>
@@ -570,7 +570,7 @@ export default function MainPanel() {
             {isGuest && (
                 <div style={{ background: "rgba(78,95,59,0.06)", border: "1px solid rgba(78,95,59,0.18)", borderRadius: 10, padding: "0.75rem 1rem", marginBottom: "1.25rem", fontSize: "0.82rem", color: "var(--text-sub)", display: "flex", alignItems: "center", gap: "0.6rem" }}>
                     <Lock size={14} />
-                    Observing as Civilian. <a href="/login" style={{ color: "var(--amber)", fontWeight: 600, textDecoration: "none" }}>Enlist to earn intel →</a>
+                    👁 Guest mode — <a href="/login" style={{ color: "var(--amber)", fontWeight: 600, textDecoration: "none" }}>Sign in to earn points →</a>
                 </div>
             )}
 
@@ -578,7 +578,7 @@ export default function MainPanel() {
             {user && user.role !== "admin" && !isHistory && !isGuest && (
                 <div style={{ background: "rgba(239,159,39,0.04)", border: "0.5px solid rgba(239,159,39,0.15)", borderRadius: 8, padding: "0.6rem 1rem", marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.72rem", color: "var(--text-sub)" }}>
                     <Shield size={12} style={{ color: "var(--amber)", flexShrink: 0 }} />
-                    Submit proof → Captain reviews → Points credited. Keeps the leaderboard legit. ✊
+                    Submit proof → Captain reviews → Points credited.
                 </div>
             )}
 
@@ -586,10 +586,10 @@ export default function MainPanel() {
             {user && user.role !== "admin" && (
                 <div className="tab-bar">
                     <button className={`tab ${activeTab === "missions" ? "active" : ""}`} style={{ background: "none", border: "none" }} onClick={() => setActiveTab("missions")}>
-                        🎯 Squad Missions
+                        📋 Daily Tasks
                     </button>
                     <button className={`tab ${activeTab === "personal" ? "active" : ""}`} style={{ background: "none", border: "none" }} onClick={() => setActiveTab("personal")}>
-                        📋 Private Log
+                        ✏️ Personal Log
                         {personalTodos.filter(t => !t.done).length > 0 && (
                             <span className="pill pill-neutral" style={{ marginLeft: "0.4rem", fontSize: "0.6rem" }}>
                                 {personalTodos.filter(t => !t.done).length}
@@ -639,9 +639,9 @@ export default function MainPanel() {
             {activeTab === "personal" && user && user.role !== "admin" && (
                 <>
                     <div style={{ marginBottom: "1rem" }}>
-                        <h2 style={{ margin: "0 0 0.2rem", fontSize: "1.1rem" }}>Private Mission Log</h2>
+                        <h2 style={{ margin: "0 0 0.2rem", fontSize: "1.1rem" }}>Personal Log</h2>
                         <p style={{ fontSize: "0.78rem", color: "var(--text-muted)", margin: 0 }}>
-                            Personal targets — not counted in Rankings.
+                            Your personal targets — not counted in the Rankings.
                         </p>
                     </div>
 

@@ -69,10 +69,10 @@ export default function Sidebar() {
             {/* Guest banner */}
             {isGuest && !user && (
                 <div style={{ margin: "0.75rem 1rem 0", padding: "0.55rem 0.75rem", background: "rgba(78,95,59,0.1)", border: "1px solid rgba(78,95,59,0.25)", borderRadius: 8, fontSize: "0.75rem", color: "var(--text-sub)", display: "flex", flexDirection: "column", gap: "0.3rem" }}>
-                    <span style={{ fontWeight: 600, color: "var(--text)" }}>👁 Civilian Observer</span>
-                    <span>You&apos;re in guest mode.{" "}
+                    <span style={{ fontWeight: 600, color: "var(--text)" }}>👁 Guest Mode</span>
+                    <span>You&apos;re browsing as a guest.{" "}
                         <Link href="/login" style={{ color: "var(--amber)", fontWeight: 600, textDecoration: "none" }}>
-                            Enlist to participate →
+                            Sign in to participate →
                         </Link>
                     </span>
                 </div>
@@ -82,7 +82,7 @@ export default function Sidebar() {
             <div style={{ padding: "0.75rem 0.5rem 0.25rem" }}>
                 <Link href="/ops" className={`nav-link ${pathname === "/ops" ? "active-nav" : ""}`} style={{ display: "flex", marginBottom: "0.15rem" }}>
                     <Crosshair size={14} />
-                    Command Center
+                    Dashboard
                 </Link>
                 <Link href="/leaderboard" className={`nav-link ${pathname === "/leaderboard" ? "active-nav" : ""}`} style={{ display: "flex", marginBottom: "0.15rem" }}>
                     <Trophy size={14} />
@@ -97,7 +97,7 @@ export default function Sidebar() {
                 {(user?.role === "admin" || (captainClubs && captainClubs.length > 0)) && (
                     <Link href="/admin" className={`nav-link ${pathname === "/admin" ? "active-nav" : ""}`} style={{ display: "flex" }}>
                         <Shield size={14} />
-                        Armory
+                        {user?.role === "admin" ? "Admin Panel" : "Verify"}
                     </Link>
                 )}
             </div>
@@ -107,7 +107,7 @@ export default function Sidebar() {
             {/* Squad list heading */}
             <div style={{ padding: "0 1.25rem", marginBottom: "0.35rem" }}>
                 <span style={{ fontSize: "0.67rem", fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
-                    My Squads
+                    My Clubs
                 </span>
             </div>
 
@@ -145,7 +145,7 @@ export default function Sidebar() {
                     </button>
                     <button
                         onClick={handleLogout}
-                        title="Stand Down (Logout)"
+                        title="Sign Out"
                         style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: "0.25rem", borderRadius: 4, display: "flex", alignItems: "center", transition: "color 0.15s" }}
                         onMouseEnter={(e) => (e.currentTarget.style.color = "#f87171")}
                         onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-muted)")}
