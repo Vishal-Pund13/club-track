@@ -360,7 +360,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           });
           if (upsertError) return { ok: false, error: upsertError.message };
           // Best-effort: link internal mobile email alias for password login
-          try { await supabase.auth.updateUser({ email: internalEmail }); } catch { /* ignore if fails */ }
+          if (registrationData.mobile) {
+            try { await supabase.auth.updateUser({ email: internalEmail }); } catch { /* ignore if fails */ }
+          }
         }
         await loadProfileAndTodos(data.user.id);
       }
