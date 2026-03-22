@@ -327,7 +327,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const verifyOtp: AuthContextValue["verifyOtp"] = async (email, otp, registrationData) => {
     const cleanEmail = email.trim().toLowerCase();
     if (!cleanEmail.includes("@")) return { ok: false, error: "Enter a valid email address." };
-    if (!otp.trim()) return { ok: false, error: "Enter the 6-digit OTP." };
+    if (!otp.trim()) return { ok: false, error: "Enter the 8-digit OTP." };
 
     if (!isSupabaseConfigured || !supabase) {
       return { ok: false, error: "Supabase is not configured. Email OTP is unavailable." };

@@ -72,7 +72,7 @@ export default function EnlistPage() {
         role: "aspirant",
       });
       if (!result.ok) return setError(result.error || "Failed to send OTP. Try again.");
-      setSuccess(`A 6-digit code has been sent to ${form.email}`);
+      setSuccess(`An 8-digit code has been sent to ${form.email}`);
       setStep("otp");
     } catch (err) {
       console.error(err);
@@ -276,24 +276,24 @@ export default function EnlistPage() {
         {step === "otp" && (
           <form onSubmit={handleVerifyOtp} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
             <div style={{ background: "rgba(78,95,59,0.08)", border: "1px solid rgba(78,95,59,0.2)", borderRadius: 10, padding: "1rem", fontSize: "0.82rem", color: "rgba(185,200,170,0.7)", lineHeight: 1.6 }}>
-              📧 Check your inbox at <strong style={{ color: "#cdd5c5" }}>{form.email}</strong>. Enter the 6-digit code below.
+              📧 Check your inbox at <strong style={{ color: "#cdd5c5" }}>{form.email}</strong>. Enter the 8-digit code below.
             </div>
 
             <div>
               <label style={labelStyle}>Verification Code</label>
               <input
-                inputMode="numeric" pattern="\d{6}" maxLength={6}
-                placeholder="000000"
+                inputMode="numeric" pattern="\d{8}" maxLength={8}
+                placeholder="00000000"
                 value={otp}
-                onChange={e => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                onChange={e => setOtp(e.target.value.replace(/\D/g, "").slice(0, 8))}
                 required style={{ ...inputStyle, letterSpacing: "0.5rem", fontSize: "1.5rem", textAlign: "center", fontFamily: "'JetBrains Mono', monospace" }}
                 onFocus={e => (e.target.style.borderColor = "rgba(78,95,59,0.7)")}
                 onBlur={e => (e.target.style.borderColor = "rgba(78,95,59,0.25)")}
               />
             </div>
 
-            <button type="submit" disabled={loading || otp.length < 6}
-              style={{ background: loading || otp.length < 6 ? "rgba(78,95,59,0.4)" : "#4E5F3B", color: "#e8eddf", border: "none", borderRadius: 10, padding: "0.9rem", fontFamily: "'Inter', sans-serif", fontSize: "0.95rem", fontWeight: 700, cursor: loading || otp.length < 6 ? "not-allowed" : "pointer", transition: "all 0.2s" }}>
+            <button type="submit" disabled={loading || otp.length < 8}
+              style={{ background: loading || otp.length < 8 ? "rgba(78,95,59,0.4)" : "#4E5F3B", color: "#e8eddf", border: "none", borderRadius: 10, padding: "0.9rem", fontFamily: "'Inter', sans-serif", fontSize: "0.95rem", fontWeight: 700, cursor: loading || otp.length < 8 ? "not-allowed" : "pointer", transition: "all 0.2s" }}>
               {loading ? "Verifying…" : "Verify & Continue →"}
             </button>
 
