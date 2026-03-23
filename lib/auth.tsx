@@ -58,7 +58,6 @@ interface AuthState {
 }
 
 interface AuthContextValue extends AuthState {
-  login: (mobileOrEmail: string, password: string) => Promise<{ ok: boolean; error?: string }>;
   sendOtp: (
     email: string,
     options?: {
@@ -253,40 +252,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  // ── Phone OTP Auth (Supabase) ────────────────────────────────────────────────
-
-  // Login with mobile + password (email is derived internally)
-  const login: AuthContextValue["login"] = async (mobileOrEmail, password) => {
-    const input = mobileOrEmail.trim();
-    const cleanPass = password.trim();
-
-    if (!isSupabaseConfigured || !supabase) {
-      return { ok: false, error: "Supabase is not configured. Password login is unavailable." };
-    }
-
-    if (cleanPass.length < 8) return { ok: false, error: "Password must be at least 8 characters." };
-
-    setLoading(true);
-    try {
-      let email = input;
-      // If it's not an email, assume it's a mobile and convert to internal email
-      if (!input.includes("@")) {
-        const digits = input.replace(/\D/g, "");
-        if (digits.length !== 10) return { ok: false, error: "Enter a valid 10-digit mobile or your admin email." };
-        email = mobileToInternalEmail(digits);
-      }
-
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password: cleanPass });
-      if (error) return { ok: false, error: error.message };
-      if (data.user) await loadProfileAndTodos(data.user.id);
-      return { ok: true };
-    } catch (err: any) {
-      console.error(err);
-      return { ok: false, error: err?.message || "A tactical error occurred during login." };
-    } finally {
-      setLoading(false);
-    }
-  };
+  // ── OTP Auth (Supabase) ────────────────────────────────────────────────
 
   const sendOtp: AuthContextValue["sendOtp"] = async (email, options) => {
     const cleanEmail = email.trim().toLowerCase();
@@ -473,7 +439,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         user, isGuest, isAdmin: user?.role === "admin",
         personalTodos, loading, captainClubs, otpSession,
-        login, sendOtp, verifyOtp, setPassword, logout, enterAsGuest,
+        sendOtp, verifyOtp, setPassword, logout, enterAsGuest,
         addPersonalTodo, togglePersonalTodo, deletePersonalTodo,
       }}
     >

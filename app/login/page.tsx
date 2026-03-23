@@ -1,46 +1,87 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { motion, AnimatePresence } from "framer-motion";
-import { Activity, ArrowLeft } from "lucide-react";
+import { Activity } from "lucide-react";
+
+const militaryLoaderPhrases = {
+  otpSend: ["Transmitting signal...", "Encoding message...", "Dispatching orders..."],
+  otpVerify: ["Authenticating...", "Verifying clearance...", "Cross-checking records..."],
+};
+
+function MilitaryLoader({ phrases }: { phrases: string[] }) {
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setIndex((i) => (i + 1) % phrases.length);
+    }, 800);
+    return () => clearInterval(timer);
+  }, [phrases]);
+
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem" }}>
+      <style>
+        {`@keyframes pulseBlink { 0% { opacity: 0.1; } 100% { opacity: 1; } }`}
+      </style>
+      <span style={{ color: "#10b981", animation: "pulseBlink 0.6s infinite alternate", fontSize: "0.85em" }}>●</span>
+      {phrases[index]}
+    </span>
+  );
+}
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, enterAsGuest, sendOtp, verifyOtp, setPassword: authSetPassword } = useAuth();
+  const { enterAsGuest, sendOtp, verifyOtp } = useAuth();
 
-  const [identifier, setIdentifier] = useState("");
-  const [password, setPassword] = useState("");
+  const [step, setStep] = useState<"email" | "otp">("email");
+  const [email, setEmail] = useState("");
+  const [otp, setOtp] = useState("");
+  
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
-  const [mode, setMode] = useState<"member" | "admin">("member");
-
-  // Forgot Password state
-  // null = showing normal login
-  const [forgotStep, setForgotStep] = useState<"email" | "otp" | "password" | null>(null);
-  const [forgotEmail, setForgotEmail] = useState("");
-  const [forgotOtp, setForgotOtp] = useState("");
-  const [forgotPass, setForgotPass] = useState("");
-  const [forgotConfirm, setForgotConfirm] = useState("");
 
   const clearMessages = () => { setError(""); setSuccess(""); };
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     clearMessages();
-    if (!identifier.trim()) { setError("Please enter your email or mobile number."); return; }
-    if (!password.trim()) { setError("Please enter your password."); return; }
+    if (!email.includes("@")) { setError("Please enter a valid email."); return; }
+    
     setLoading(true);
     try {
-      const result = await login(identifier, password);
-      if (!result.ok) { setError(result.error || "Login failed."); return; }
-      router.push(mode === "admin" ? "/admin" : "/ops");
+      const result = await sendOtp(email, { shouldCreateUser: false });
+      if (!result.ok) { setError(result.error || "Login failed - account may not exist."); return; }
+      
+      setSuccess(`8-digit code dispatched to ${email}`);
+      setStep("otp");
     } catch (err) {
-      console.error(err);
-      setError("An error occurred. Please try again.");
+      setError("An unexpected error occurred.");
     } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    clearMessages();
+    if (otp.length < 8) { setError("Enter the 8-digit code."); return; }
+    
+    setLoading(true);
+    try {
+      const result = await verifyOtp(email, otp);
+      if (!result.ok) { 
+        setError(result.error || "Verification failed.");
+        setLoading(false);
+        return; 
+      }
+      
+      router.push("/ops");
+    } catch (err) {
+      setError("An unexpected error occurred.");
       setLoading(false);
     }
   };
@@ -48,68 +89,6 @@ export default function LoginPage() {
   const handleGuest = () => {
     enterAsGuest();
     router.push("/ops");
-  };
-
-  const handleForgotSend = async (e: React.FormEvent) => {
-    e.preventDefault();
-    clearMessages();
-    if (!forgotEmail.includes("@")) { setError("Please enter a valid email."); return; }
-    setLoading(true);
-    try {
-      const result = await sendOtp(forgotEmail, { shouldCreateUser: false });
-      if (!result.ok) { setError(result.error || "Failed to send reset code."); return; }
-      setSuccess(`Reset code sent to ${forgotEmail}`);
-      setForgotStep("otp");
-    } catch (err) {
-      setError("An error occurred.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleForgotVerify = async (e: React.FormEvent) => {
-    e.preventDefault();
-    clearMessages();
-    if (forgotOtp.length < 8) { setError("Enter the 8-digit code."); return; }
-    setLoading(true);
-    try {
-      // This will actually log the user in if the OTP is correct!
-      const result = await verifyOtp(forgotEmail, forgotOtp);
-      if (!result.ok) { setError(result.error || "Verification failed."); return; }
-      setSuccess("Code verified. Set your new password.");
-      setForgotStep("password");
-    } catch (err) {
-      setError("An error occurred.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleForgotSetPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    clearMessages();
-    if (forgotPass.length < 8) { setError("Password must be at least 8 chars."); return; }
-    if (forgotPass !== forgotConfirm) { setError("Passwords don't match."); return; }
-    setLoading(true);
-    try {
-      const result = await authSetPassword(forgotPass);
-      if (!result.ok) { setError(result.error || "Failed to set password."); return; }
-      // Fully successful, they are logged in with new password
-      router.push("/ops");
-    } catch (err) {
-      setError("An error occurred.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const resetForgotState = () => {
-    setForgotStep(null);
-    setForgotEmail("");
-    setForgotOtp("");
-    setForgotPass("");
-    setForgotConfirm("");
-    clearMessages();
   };
 
   return (
@@ -126,7 +105,6 @@ export default function LoginPage() {
         overflow: "hidden",
       }}
     >
-      {/* Glow */}
       <div style={{ position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)", width: "80vw", height: "45vh", background: "radial-gradient(ellipse at 50% 0%, var(--accent-light) 0%, transparent 70%)", pointerEvents: "none", opacity: 0.6 }} />
 
       <motion.div
@@ -145,22 +123,19 @@ export default function LoginPage() {
           zIndex: 2,
         }}
       >
-        {/* Back link */}
-        <button
-          onClick={() => {
-            if (forgotStep) resetForgotState();
-            else router.push("/");
-          }}
-          style={{ background: "none", border: "none", color: "var(--text-muted)", fontSize: "0.85rem", cursor: "pointer", fontWeight: 500, padding: 0, marginBottom: "2rem", display: "flex", alignItems: "center", gap: "0.4rem", transition: "color 0.2s" }}
-          onMouseEnter={e => e.currentTarget.style.color = "var(--text)"}
-          onMouseLeave={e => e.currentTarget.style.color = "var(--text-muted)"}
-        >
-          <ArrowLeft size={16} /> Back
-        </button>
+        {step === "otp" && (
+          <button
+            onClick={() => { setStep("email"); setOtp(""); clearMessages(); }}
+            style={{ background: "none", border: "none", color: "var(--text-muted)", fontSize: "0.85rem", cursor: "pointer", fontWeight: 500, padding: 0, marginBottom: "2rem", display: "flex", alignItems: "center", gap: "0.4rem", transition: "color 0.2s" }}
+            onMouseEnter={e => e.currentTarget.style.color = "var(--text)"}
+            onMouseLeave={e => e.currentTarget.style.color = "var(--text-muted)"}
+          >
+            ← Back
+          </button>
+        )}
 
-        {/* Header */}
         <div style={{ marginBottom: "2rem" }}>
-          {!forgotStep && (
+          {step === "email" && (
             <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", marginBottom: "0.75rem" }}>
               <div style={{ width: 34, height: 34, background: "var(--accent)", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff" }}>
                 <Activity size={18} strokeWidth={2.5} />
@@ -169,20 +144,13 @@ export default function LoginPage() {
             </div>
           )}
           <h1 style={{ fontSize: "1.65rem", fontWeight: 700, color: "var(--text)", margin: 0, letterSpacing: "-0.03em" }}>
-            {forgotStep === "email" && "Reset Password"}
-            {forgotStep === "otp" && "Verify Code"}
-            {forgotStep === "password" && "New Password"}
-            {!forgotStep && "Welcome back"}
+            {step === "email" ? "Report for Duty" : "Authenticate"}
           </h1>
           <p style={{ fontSize: "0.9rem", color: "var(--text-muted)", marginTop: "0.4rem" }}>
-            {forgotStep === "email" && "Enter your registered email to receive a reset code."}
-            {forgotStep === "otp" && `We sent an 8-digit code to ${forgotEmail}.`}
-            {forgotStep === "password" && "Enter a new secure password."}
-            {!forgotStep && "Sign in to your account"}
+            {step === "email" ? "Sign in using your registered email address" : `Check your comms. Code sent to ${email}`}
           </p>
         </div>
 
-        {/* Feedback Messages */}
         <AnimatePresence>
           {(error || success) && (
             <motion.div
@@ -201,129 +169,24 @@ export default function LoginPage() {
           )}
         </AnimatePresence>
 
-        {/* --- FORGOT PASSWORD FLOW --- */}
-        {forgotStep === "email" && (
-          <form onSubmit={handleForgotSend} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-            <div>
-              <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)", marginBottom: "0.5rem" }}>Registered Email</label>
-              <input
-                type="email" placeholder="name@example.com" value={forgotEmail}
-                onChange={e => setForgotEmail(e.target.value)} required
-                className="input-field" style={{ padding: "0.85rem 1rem", fontSize: "0.95rem" }}
-              />
-            </div>
-            <button type="submit" disabled={loading} className="btn-amber" style={{ padding: "1.1rem", fontSize: "1rem", marginTop: "0.5rem" }}>
-              {loading ? "Sending…" : "Send Reset Code"}
-            </button>
-          </form>
-        )}
-
-        {forgotStep === "otp" && (
-          <form onSubmit={handleForgotVerify} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-            <div>
-              <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)", marginBottom: "0.5rem" }}>8-Digit Code</label>
-              <input
-                type="text" inputMode="numeric" pattern="\d{8}" maxLength={8}
-                placeholder="00000000" value={forgotOtp}
-                onChange={e => setForgotOtp(e.target.value.replace(/\D/g, "").slice(0, 8))}
-                required className="input-field"
-                style={{ letterSpacing: "0.5rem", fontSize: "1.5rem", textAlign: "center", fontFamily: "'JetBrains Mono', monospace" }}
-              />
-            </div>
-            <button type="submit" disabled={loading || forgotOtp.length !== 8} className="btn-amber" style={{ padding: "1.1rem", fontSize: "1rem", marginTop: "0.5rem" }}>
-              {loading ? "Verifying…" : "Verify Code"}
-            </button>
-          </form>
-        )}
-
-        {forgotStep === "password" && (
-          <form onSubmit={handleForgotSetPassword} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-            <div>
-              <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)", marginBottom: "0.5rem" }}>New Password</label>
-              <input
-                type="password" placeholder="Min 8 characters" value={forgotPass}
-                onChange={e => setForgotPass(e.target.value)} required
-                className="input-field" style={{ padding: "0.85rem 1rem", fontSize: "0.95rem" }}
-              />
-            </div>
-            <div>
-              <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)", marginBottom: "0.5rem" }}>Confirm Password</label>
-              <input
-                type="password" placeholder="Re-enter password" value={forgotConfirm}
-                onChange={e => setForgotConfirm(e.target.value)} required
-                className="input-field" style={{ padding: "0.85rem 1rem", fontSize: "0.95rem" }}
-              />
-            </div>
-            <button type="submit" disabled={loading} className="btn-amber" style={{ padding: "1.1rem", fontSize: "1rem", marginTop: "0.5rem" }}>
-              {loading ? "Updating…" : "Update Password & Sign In"}
-            </button>
-          </form>
-        )}
-
-        {/* --- NORMAL LOGIN FLOW --- */}
-        {!forgotStep && (
+        {step === "email" && (
           <>
-            {/* Role toggle */}
-            <div style={{ display: "flex", background: "var(--surface-2)", border: "1px solid var(--border-dark)", borderRadius: 10, padding: 4, marginBottom: "2rem" }}>
-              {(["member", "admin"] as const).map((m) => (
-                <button
-                  key={m}
-                  onClick={() => { setMode(m); clearMessages(); }}
-                  style={{
-                    flex: 1, padding: "0.65rem", border: "none", borderRadius: 8,
-                    fontSize: "0.85rem", fontWeight: 600,
-                    background: mode === m ? "var(--accent)" : "transparent",
-                    color: mode === m ? "#fff" : "var(--text-muted)",
-                    cursor: "pointer", transition: "all 0.2s", textTransform: "capitalize",
-                    boxShadow: mode === m ? "var(--shadow-sm)" : "none",
-                  }}
-                >
-                  {m === "member" ? "Member" : "Admin"}
-                </button>
-              ))}
-            </div>
-
-            <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+            <form onSubmit={handleSendOtp} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
               <div>
                 <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)", marginBottom: "0.5rem" }}>
-                  {mode === "admin" ? "Admin Email" : "Mobile Number or Email"}
+                  Registered Email
                 </label>
                 <input
-                  type={mode === "admin" ? "email" : "text"}
-                  inputMode={mode === "member" ? "numeric" : undefined}
-                  placeholder={mode === "admin" ? "admin@clubtrack.app" : "10-digit mobile or email"}
-                  value={identifier}
-                  onChange={(e) => setIdentifier(e.target.value)}
+                  type="email"
+                  placeholder="HQ@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   required
                   className="input-field"
                   style={{ padding: "0.85rem 1rem", fontSize: "0.95rem" }}
                 />
-                {mode === "member" && (
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginTop: "0.35rem" }}>
-                    <p style={{ fontSize: "0.72rem", color: "var(--text-muted)", flex: 1 }}>
-                      Enter your 10-digit mobile number or registered email.
-                    </p>
-                  </div>
-                )}
               </div>
-              <div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
-                  <label style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)" }}>Password</label>
-                  <button type="button" onClick={() => { clearMessages(); setForgotStep("email"); }}
-                    style={{ background: "none", border: "none", color: "var(--accent)", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer", padding: 0 }}>
-                    Forgot password?
-                  </button>
-                </div>
-                <input
-                  type="password"
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="input-field"
-                  style={{ padding: "0.85rem 1rem", fontSize: "0.95rem", fontFamily: "small-caption" }}
-                />
-              </div>
+              
               <button
                 type="submit"
                 disabled={loading}
@@ -333,11 +196,11 @@ export default function LoginPage() {
                   opacity: loading ? 0.7 : 1, cursor: loading ? "not-allowed" : "pointer",
                 }}
               >
-                {loading ? "Signing in…" : "Sign In"}
+                {loading ? <MilitaryLoader phrases={militaryLoaderPhrases.otpSend} /> : "Request Login Code"}
               </button>
 
               <div style={{ textAlign: "center", fontSize: "0.85rem", color: "var(--text-muted)", marginTop: "0.5rem" }}>
-                New here?{" "}
+                Not enlisted yet?{" "}
                 <button
                   type="button"
                   onClick={() => router.push("/enlist")}
@@ -348,7 +211,6 @@ export default function LoginPage() {
               </div>
             </form>
 
-            {/* Divider */}
             <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", margin: "2rem 0" }}>
               <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
               <span style={{ fontSize: "0.8rem", color: "var(--text-muted)", fontWeight: 500 }}>or</span>
@@ -356,9 +218,31 @@ export default function LoginPage() {
             </div>
 
             <button onClick={handleGuest} className="btn-outline" style={{ width: "100%", padding: "1rem" }}>
-              Continue as Guest
+              Enter as Guest Observer
             </button>
           </>
+        )}
+
+        {step === "otp" && (
+          <form onSubmit={handleVerifyOtp} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+            <div>
+              <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)", marginBottom: "0.5rem" }}>8-Digit Code</label>
+              <input
+                type="text" inputMode="numeric" pattern="\d{8}" maxLength={8}
+                placeholder="00000000" value={otp}
+                onChange={e => setOtp(e.target.value.replace(/\D/g, "").slice(0, 8))}
+                required className="input-field"
+                style={{ letterSpacing: "0.5rem", fontSize: "1.5rem", textAlign: "center", fontFamily: "'JetBrains Mono', monospace" }}
+              />
+            </div>
+            <button type="submit" disabled={loading || otp.length !== 8} className="btn-amber" style={{ padding: "1.1rem", fontSize: "1rem", marginTop: "0.5rem" }}>
+              {loading ? <MilitaryLoader phrases={militaryLoaderPhrases.otpVerify} /> : "Verify Identity"}
+            </button>
+            <button type="button" onClick={async () => { setError(""); setOtp(""); await handleSendOtp({ preventDefault: () => {} } as React.FormEvent); }}
+              style={{ background: "none", border: "none", color: "var(--text-muted)", fontSize: "0.80rem", cursor: "pointer", textAlign: "center", width: "100%", marginTop: "0.5rem" }}>
+              Didn't receive orders? Resend code
+            </button>
+          </form>
         )}
       </motion.div>
     </div>
