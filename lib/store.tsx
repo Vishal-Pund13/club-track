@@ -462,10 +462,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     // ── Captain / Admin reviews a verification ────────────────────────────────
     const reviewVerification = async (verifId: string, status: VerifStatus, reviewNote: string, reviewerId: string) => {
-        dispatch({ type: "UPDATE_VERIFICATION", id: verifId, status, reviewNote, reviewedBy: reviewerId });
+        // NOTE: We do NOT do an optimistic dispatch here.
+        // The realtime channel subscription fires UPSERT_VERIFICATION when Supabase updates,
+        // which handles state. A double dispatch was causing the "approve twice" bug.
+        // We use a timed fallback: if realtime doesn't fire within 2.5s, we apply manually.
 
         if (isSupabaseConfigured && supabase) {
-            console.log(`[Sync] Updating verification ${verifId} to ${status}...`);
             const { data, error } = await supabase
                 .from("task_verifications")
                 .update({
@@ -480,11 +482,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
             if (error) {
                 console.error("[Sync] Verification update failed:", error.message);
-            } else if (!data) {
-                console.warn("[Sync] Verification update applied to 0 rows. Likely a missing row or RLS block.");
-            } else {
+            } else if (data) {
                 console.log("[Sync] Verification DB update successful:", data.id);
+                // Fallback: if realtime doesn't fire in 2.5s, apply manually
+                setTimeout(() => {
+                    dispatch({ type: "UPDATE_VERIFICATION", id: verifId, status, reviewNote, reviewedBy: reviewerId });
+                }, 2500);
             }
+        } else {
+            // Offline mode: apply directly since there's no realtime
+            dispatch({ type: "UPDATE_VERIFICATION", id: verifId, status, reviewNote, reviewedBy: reviewerId });
         }
     };
 

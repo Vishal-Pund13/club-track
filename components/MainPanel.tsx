@@ -25,20 +25,31 @@ function ProofModal({
 }) {
     const [proof, setProof] = useState("");
     const [submitting, setSubmitting] = useState(false);
+    const [submitError, setSubmitError] = useState("");
 
     async function handle(e: React.FormEvent) {
         e.preventDefault();
+        setSubmitError("");
+
+        // Block empty proof submissions
+        if (proof.trim().length === 0) {
+            setSubmitError("Please provide proof before submitting.");
+            return;
+        }
+
         setSubmitting(true);
         try {
-            await Promise.race([
-                onSubmit(proof.trim()),
-                new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 8000))
-            ]);
-        } catch (err) {
+            const timeout = new Promise<never>((_, reject) =>
+                setTimeout(() => reject(new Error("Request timed out. Please try again.")), 10000)
+            );
+            await Promise.race([Promise.resolve(onSubmit(proof.trim())), timeout]);
+            // Close only on success
+            onClose();
+        } catch (err: any) {
             console.warn("[Submission] Failed or timed out:", err);
+            setSubmitError(err?.message || "Submission failed. Please try again.");
         } finally {
             setSubmitting(false);
-            onClose();
         }
     }
 
@@ -49,11 +60,12 @@ function ProofModal({
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                onClick={onClose}
+                onClick={() => { if (!submitting) onClose(); }}
                 style={{
                     position: "fixed", inset: 0, zIndex: 50,
-                    background: "rgba(0,0,0,0.55)", display: "flex",
+                    background: "rgba(0,0,0,0.6)", display: "flex",
                     alignItems: "center", justifyContent: "center", padding: "1rem",
+                    backdropFilter: "blur(4px)",
                 }}
             >
                 <motion.div
@@ -64,61 +76,81 @@ function ProofModal({
                     transition={{ duration: 0.2 }}
                     onClick={(e) => e.stopPropagation()}
                     style={{
-                        background: "var(--bg)", border: "1px solid var(--border)",
-                        borderRadius: 14, padding: "1.75rem", width: "100%", maxWidth: 460,
-                        boxShadow: "0 20px 60px rgba(0,0,0,0.4)",
+                        background: "var(--surface)", border: "1px solid var(--border)",
+                        borderRadius: 16, padding: "1.75rem", width: "100%", maxWidth: 460,
+                        boxShadow: "var(--shadow-lg)",
                     }}
                 >
                     {/* Header */}
-                    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "1.2rem" }}>
+                    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "1.25rem" }}>
                         <div>
-                            <div style={{ fontSize: "0.7rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--amber)", marginBottom: "0.25rem" }}>
-                                Submit Proof of Completion
+                            <div style={{ fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--accent)", marginBottom: "0.3rem" }}>
+                                Proof of Completion
                             </div>
-                            <div style={{ fontSize: "1rem", fontWeight: 600, color: "var(--text)" }}>
+                            <div style={{ fontSize: "1.05rem", fontWeight: 600, color: "var(--text)", lineHeight: 1.3 }}>
                                 {task.title}
                             </div>
                         </div>
-                        <button onClick={onClose} className="icon-btn">
+                        <button onClick={() => { if (!submitting) onClose(); }} className="icon-btn">
                             <X size={18} />
                         </button>
                     </div>
 
                     {/* Info banner */}
                     <div style={{
-                        background: "rgba(239,159,39,0.07)", border: "0.5px solid rgba(239,159,39,0.2)",
+                        background: "var(--bg)", border: "1px solid var(--border)",
                         borderRadius: 8, padding: "0.75rem 1rem", marginBottom: "1.25rem",
-                        fontSize: "0.78rem", color: "var(--text-sub)",
+                        fontSize: "0.8rem", color: "var(--text-sub)",
                         display: "flex", alignItems: "flex-start", gap: "0.5rem",
                     }}>
-                        <Shield size={14} style={{ color: "var(--amber)", marginTop: 1, flexShrink: 0 }} />
+                        <Shield size={14} style={{ color: "var(--accent)", marginTop: 2, flexShrink: 0 }} />
                         <span>
-                            Your submission will be reviewed by your <strong>Captain</strong>.
-                            Paste an activity link, screenshot URL, or short description.
+                            Reviewed by your <strong style={{ color: "var(--text)" }}>Captain</strong> before points are awarded.
+                            Paste an activity link, screenshot URL, or a short description.
                         </span>
                     </div>
 
                     <form onSubmit={handle} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
                         <div>
-                            <label style={{ display: "block", fontSize: "0.72rem", fontWeight: 700, color: "var(--text-sub)", marginBottom: "0.4rem", textTransform: "uppercase", letterSpacing: "0.07em" }}>
-                                Proof / Activity Link
+                            <label style={{ display: "block", fontSize: "0.72rem", fontWeight: 700, color: "var(--text-sub)", marginBottom: "0.45rem", textTransform: "uppercase", letterSpacing: "0.07em" }}>
+                                Your Proof <span style={{ color: "#f87171", fontWeight: 400 }}>required</span>
                             </label>
                             <textarea
                                 className="input-field"
-                                placeholder="e.g. https://strava.com/activity/... "
+                                placeholder="https://strava.com/activity/... or describe what you did"
                                 value={proof}
-                                onChange={(e) => setProof(e.target.value)}
+                                onChange={(e) => { setProof(e.target.value); if (submitError) setSubmitError(""); }}
                                 rows={3}
-                                style={{ resize: "vertical", fontFamily: "inherit", minHeight: 80 }}
+                                style={{ resize: "vertical", fontFamily: "inherit", minHeight: 90 }}
                             />
                         </div>
 
-                        <div style={{ display: "flex", gap: "0.6rem" }}>
-                            <button type="button" onClick={onClose} className="btn-outline" style={{ flex: 1 }}>
+                        {/* Error */}
+                        <AnimatePresence>
+                            {submitError && (
+                                <motion.div
+                                    initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
+                                    style={{ fontSize: "0.82rem", color: "#f87171", background: "rgba(248,113,113,0.07)", border: "1px solid rgba(248,113,113,0.25)", borderRadius: 8, padding: "0.6rem 0.85rem", overflow: "hidden" }}
+                                >
+                                    ⚠ {submitError}
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+
+                        <div style={{ display: "flex", gap: "0.65rem" }}>
+                            <button type="button" onClick={() => { if (!submitting) onClose(); }} className="btn-outline" style={{ flex: 1 }} disabled={submitting}>
                                 Cancel
                             </button>
-                            <button type="submit" className="btn-amber" disabled={submitting} style={{ flex: 2 }}>
-                                {submitting ? "Submitting…" : <><ShieldCheck size={14} /> Submit for Review</>}
+                            <button
+                                type="submit"
+                                className="btn-amber"
+                                disabled={submitting || proof.trim().length === 0}
+                                style={{ flex: 2 }}
+                            >
+                                {submitting
+                                    ? <><span style={{ display: "inline-block", width: 14, height: 14, border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 0.6s linear infinite" }} /> Submitting…</>
+                                    : <><ShieldCheck size={14} /> Submit for Review</>
+                                }
                             </button>
                         </div>
                     </form>
