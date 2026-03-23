@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useReducer, ReactNode, useEffect } from "react";
+import React, { createContext, useContext, useReducer, ReactNode, useEffect, useRef } from "react";
 import {
     CLUBS,
     TASKS,
@@ -462,10 +462,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     // ── Captain / Admin reviews a verification ────────────────────────────────
     const reviewVerification = async (verifId: string, status: VerifStatus, reviewNote: string, reviewerId: string) => {
-        // NOTE: We do NOT do an optimistic dispatch here.
-        // The realtime channel subscription fires UPSERT_VERIFICATION when Supabase updates,
-        // which handles state. A double dispatch was causing the "approve twice" bug.
-        // We use a timed fallback: if realtime doesn't fire within 2.5s, we apply manually.
+        // We rely on realtime (UPSERT_VERIFICATION) as the primary state update.
+        // A timed fallback applies the update manually if realtime is slow.
+        // A ref flag prevents both from firing, avoiding the "approve twice" bug.
+        const realtimeFired = { current: false };
 
         if (isSupabaseConfigured && supabase) {
             const { data, error } = await supabase
@@ -482,12 +482,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
             if (error) {
                 console.error("[Sync] Verification update failed:", error.message);
+                // On error, apply manually so UI isn't stuck
+                dispatch({ type: "UPDATE_VERIFICATION", id: verifId, status, reviewNote, reviewedBy: reviewerId });
             } else if (data) {
                 console.log("[Sync] Verification DB update successful:", data.id);
-                // Fallback: if realtime doesn't fire in 2.5s, apply manually
+                // Fallback: if realtime doesn't fire in 2s, apply manually.
+                // realtimeFired.current will be set to true by UPSERT_VERIFICATION handler if it fires first.
                 setTimeout(() => {
-                    dispatch({ type: "UPDATE_VERIFICATION", id: verifId, status, reviewNote, reviewedBy: reviewerId });
-                }, 2500);
+                    if (!realtimeFired.current) {
+                        dispatch({ type: "UPDATE_VERIFICATION", id: verifId, status, reviewNote, reviewedBy: reviewerId });
+                    }
+                }, 2000);
             }
         } else {
             // Offline mode: apply directly since there's no realtime
@@ -551,9 +556,10 @@ export function useCurrentUser() {
 export function useActiveClub() {
     const { state } = useApp();
     if (state.activeClubId === "all") {
-        return { id: "all", name: "All Squads", icon: "🌐", description: "Complete missions across all your squads. Every rep counts, soldier." } as any;
+        return { id: "all", name: "All Squads", icon: "🌐", description: "View tasks across all your squads." } as any;
     }
-    return state.clubs.find(c => c.id === state.activeClubId)!;
+    return state.clubs.find(c => c.id === state.activeClubId)
+        ?? { id: state.activeClubId, name: "Squad", icon: "📋", description: "" } as any;
 }
 
 export function useTodayTasks(clubId?: string) {

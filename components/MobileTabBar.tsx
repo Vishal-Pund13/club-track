@@ -73,14 +73,21 @@ export default function MobileTabBar() {
                     {state.darkMode ? "Light" : "Dark"}
                 </button>
 
-                {/* Logout — always shown, red */}
-                <button
-                    className="mobile-tab-bar-item danger"
-                    onClick={handleLogout}
-                >
-                    <LogOut size={19} />
-                    Logout
-                </button>
+                {/* Logout — only for authenticated users */}
+                {user ? (
+                    <button
+                        className="mobile-tab-bar-item danger"
+                        onClick={handleLogout}
+                    >
+                        <LogOut size={19} />
+                        Logout
+                    </button>
+                ) : (
+                    <Link href="/login" className="mobile-tab-bar-item">
+                        <User size={19} />
+                        Sign In
+                    </Link>
+                )}
             </nav>
         </div>
     );

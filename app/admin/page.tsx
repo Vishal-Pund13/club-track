@@ -156,6 +156,7 @@ export default function AdminPage() {
     const [enrolledCount, setEnrolledCount] = useState(0);
     const [captainAssignments, setCaptainAssignments] = useState<CaptainAssignment[]>([]);
     const [isMobile, setIsMobile] = useState(false);
+    const [deploying, setDeploying] = useState(false);
 
     useEffect(() => {
         const check = () => setIsMobile(window.innerWidth < 768);
@@ -171,12 +172,12 @@ export default function AdminPage() {
         } catch { /* ignore */ }
     }, []);
 
-    // Set default tab for Captains
+    // Set default tab for Captains — stable dep: role + captain count
     useEffect(() => {
         if (user && user.role !== "admin" && (authCaptainClubs || []).length > 0) {
             setActiveTab("verify");
         }
-    }, [user, authCaptainClubs]);
+    }, [user?.role, authCaptainClubs?.length]);
 
     const fetchCaptainAssignments = async () => {
         const { supabase } = await import("@/lib/supabase");
@@ -189,7 +190,7 @@ export default function AdminPage() {
         if (user?.role === "admin") {
             fetchCaptainAssignments();
         }
-    }, [user]);
+    }, [user?.id]);
 
     // Reset roster pagination when roster size changes (or on mount)
     useEffect(() => {
@@ -250,14 +251,18 @@ export default function AdminPage() {
         .filter(x => x.user);
     const missionCompletions = (taskId: string) => state.completions.filter(c => c.task_id === taskId);
 
-    // Deploy handler
     async function handleDeploy(e: React.FormEvent) {
         e.preventDefault();
-        if (!form.title.trim()) return;
-        await addTaskRealtime({ ...form, date: TODAY, active: true });
-        setSubmitted(true);
-        setForm(DEFAULT_FORM);
-        setTimeout(() => setSubmitted(false), 3000);
+        if (!form.title.trim() || deploying) return;
+        setDeploying(true);
+        try {
+            await addTaskRealtime({ ...form, date: TODAY, active: true });
+            setSubmitted(true);
+            setForm(DEFAULT_FORM);
+            setTimeout(() => setSubmitted(false), 3000);
+        } finally {
+            setDeploying(false);
+        }
     }
 
     const dateLabel = new Date(TODAY).toLocaleDateString("en-US", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
@@ -576,8 +581,8 @@ export default function AdminPage() {
                                     </div>
 
                                     <div style={{ display: "flex", alignItems: "center", gap: "1rem", paddingTop: "0.5rem" }}>
-                                        <button type="submit" className="btn-amber">
-                                            Post Task
+                                        <button type="submit" className="btn-amber" disabled={deploying}>
+                                            {deploying ? "Posting…" : "Post Task"}
                                         </button>
                                         <AnimatePresence>
                                             {submitted && (

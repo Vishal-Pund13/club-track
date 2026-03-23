@@ -28,6 +28,8 @@ export default function ProfilePage() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [passwordLoading, setPasswordLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
@@ -57,12 +59,12 @@ export default function ProfilePage() {
     if (username && !/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
       return setError("Username must be 3–20 chars (letters, numbers, underscore).");
     }
-    setLoading(true);
+    setProfileLoading(true);
     try {
       const { error: upErr } = await supabase.from("profiles").update({ username: username || null, name }).eq("id", user.id);
       if (upErr) return setError(upErr.message);
       setSuccess("Profile updated successfully.");
-    } finally { setLoading(false); }
+    } finally { setProfileLoading(false); }
   }
 
   async function changePassword(e: React.FormEvent) {
@@ -70,13 +72,13 @@ export default function ProfilePage() {
     clearFeedback();
     if (newPassword.length < 6) return setError("Password must be at least 6 characters.");
     if (newPassword !== confirmPassword) return setError("Passwords don't match.");
-    setLoading(true);
+    setPasswordLoading(true);
     try {
       const r = await setPassword(newPassword);
       if (!r.ok) return setError(r.error || "Failed to change password.");
       setNewPassword(""); setConfirmPassword("");
       setSuccess("Password updated successfully.");
-    } finally { setLoading(false); }
+    } finally { setPasswordLoading(false); }
   }
 
   return (
@@ -153,8 +155,8 @@ export default function ProfilePage() {
                   <input className="input-field" placeholder="e.g. rajesh_nda" value={username} onChange={e => setUsername(e.target.value)} />
                   <p style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "0.3rem" }}>3–20 characters · letters, numbers, underscore only</p>
                 </Field>
-                <button className="btn-amber" disabled={loading} type="submit" style={{ alignSelf: "flex-start" }}>
-                  {loading ? "Saving…" : "Save Changes"}
+                <button className="btn-amber" disabled={profileLoading} type="submit" style={{ alignSelf: "flex-start" }}>
+                  {profileLoading ? "Saving…" : "Save Changes"}
                 </button>
               </form>
             </div>
@@ -172,8 +174,8 @@ export default function ProfilePage() {
                 <Field label="Confirm Password">
                   <input className="input-field" type="password" placeholder="Re-enter new password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} />
                 </Field>
-                <button className="btn-amber" disabled={loading} type="submit" style={{ alignSelf: "flex-start" }}>
-                  {loading ? "Updating…" : "Update Password"}
+                <button className="btn-amber" disabled={passwordLoading} type="submit" style={{ alignSelf: "flex-start" }}>
+                  {passwordLoading ? "Updating…" : "Update Password"}
                 </button>
               </form>
             </div>
