@@ -358,7 +358,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (registrationData) {
         const initials = makeInitials(registrationData.name);
-        const internalEmail = mobileToInternalEmail(registrationData.mobile);
 
         try {
           const { error: upsertError } = await supabase.from("profiles").upsert({
@@ -380,9 +379,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return { ok: false, error: "Failed to save profile details." };
         }
 
-        if (registrationData.mobile) {
-          try { await supabase.auth.updateUser({ email: internalEmail }); } catch { /* ignore */ }
-        }
       }
 
       await loadProfileAndTodos(data.user.id);
