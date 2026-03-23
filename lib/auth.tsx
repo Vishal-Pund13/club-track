@@ -54,6 +54,7 @@ interface AuthState {
   personalTodos: PersonalTodo[];
   loading: boolean;
   captainClubs: string[]; // club IDs this user is captain of
+  otpSession: { access_token: string; refresh_token: string } | null;
 }
 
 interface AuthContextValue extends AuthState {
@@ -147,6 +148,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [captainClubs, setCaptainClubs] = useState<string[]>([]);
   const [personalTodos, setPersonalTodos] = useState<PersonalTodo[]>([]);
   const [loading, setLoading] = useState(true);
+  const [otpSession, setOtpSession] = useState<{ access_token: string; refresh_token: string } | null>(null);
 
   // ── Load session on mount ────────────────────────────────────────────────────
   useEffect(() => {
@@ -351,6 +353,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { ok: false, error: error.message };
       }
 
+      if (data.session) {
+        setOtpSession({ access_token: data.session.access_token, refresh_token: data.session.refresh_token });
+      }
+
       if (!data || !data.user) {
         console.warn("verifyOtp returned no user but no explicit error!");
         return { ok: false, error: "Verification failed. The code may be invalid or expired." };
@@ -402,14 +408,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     setLoading(true);
     try {
-      // Refresh session before updating password to ensure active auth state
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData.session) {
-        return { ok: false, error: "Session expired. Please verify your email again." };
+      if (otpSession) {
+        await supabase.auth.setSession({ access_token: otpSession.access_token, refresh_token: otpSession.refresh_token });
       }
-
       const { error } = await supabase.auth.updateUser({ password: cleanPass });
       if (error) return { ok: false, error: error.message };
+      setOtpSession(null);
       return { ok: true };
     } finally {
       setLoading(false);
@@ -468,7 +472,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider
       value={{
         user, isGuest, isAdmin: user?.role === "admin",
-        personalTodos, loading, captainClubs,
+        personalTodos, loading, captainClubs, otpSession,
         login, sendOtp, verifyOtp, setPassword, logout, enterAsGuest,
         addPersonalTodo, togglePersonalTodo, deletePersonalTodo,
       }}
