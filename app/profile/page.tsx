@@ -55,14 +55,15 @@ export default function ProfilePage() {
     e.preventDefault();
     clearFeedback();
     if (!user) return;
-    if (!isSupabaseConfigured || !supabase) return setError("Supabase is not configured.");
+    if (!isSupabaseConfigured || !supabase) { setError("Supabase is not configured."); return; }
     if (username && !/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
-      return setError("Username must be 3–20 chars (letters, numbers, underscore).");
+      setError("Username must be 3–20 chars (letters, numbers, underscore).");
+      return;
     }
     setProfileLoading(true);
     try {
       const { error: upErr } = await supabase.from("profiles").update({ username: username || null, name }).eq("id", user.id);
-      if (upErr) return setError(upErr.message);
+      if (upErr) { setError(upErr.message); return; }
       setSuccess("Profile updated successfully.");
     } finally { setProfileLoading(false); }
   }

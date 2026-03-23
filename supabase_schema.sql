@@ -197,3 +197,40 @@ BEGIN
         'admin'
     ) ON CONFLICT (id) DO UPDATE SET role = 'admin', mobile = 'admin';
 END $$;
+
+-- ════════════════════════════════════════════════════════════════════
+-- STREAK UPDATE FUNCTION
+-- Called from the app when a verification is approved.
+-- Atomically increments streak if last_active was yesterday,
+-- keeps it if already active today, or resets to 1 otherwise.
+-- ════════════════════════════════════════════════════════════════════
+CREATE OR REPLACE FUNCTION public.update_user_streak(p_user_id UUID, p_today TEXT)
+RETURNS void AS $$
+DECLARE
+  v_last_active TEXT;
+  v_yesterday   TEXT;
+BEGIN
+  SELECT last_active_date INTO v_last_active
+    FROM public.profiles WHERE id = p_user_id;
+
+  v_yesterday := (p_today::DATE - INTERVAL '1 day')::TEXT;
+
+  IF v_last_active = p_today THEN
+    -- Already active today, no change needed
+    NULL;
+  ELSIF v_last_active = v_yesterday THEN
+    -- Active yesterday → extend streak
+    UPDATE public.profiles
+      SET streak = streak + 1, last_active_date = p_today
+      WHERE id = p_user_id;
+  ELSE
+    -- Missed a day (or brand new) → reset streak to 1
+    UPDATE public.profiles
+      SET streak = 1, last_active_date = p_today
+      WHERE id = p_user_id;
+  END IF;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Grant execute to authenticated users
+GRANT EXECUTE ON FUNCTION public.update_user_streak(UUID, TEXT) TO authenticated;

@@ -477,7 +477,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
                     reviewed_at: new Date().toISOString(),
                 })
                 .eq("id", verifId)
-                .select()
+                .select("*, task_id, user_id")
                 .single();
 
             if (error) {
@@ -486,8 +486,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
                 dispatch({ type: "UPDATE_VERIFICATION", id: verifId, status, reviewNote, reviewedBy: reviewerId });
             } else if (data) {
                 console.log("[Sync] Verification DB update successful:", data.id);
+
+                // ── Update streak when approved ─────────────────────────────
+                if (status === "approved") {
+                    const today = new Date().toISOString().slice(0, 10);
+                    // Call RPC that atomically updates streak + last_active_date
+                    supabase.rpc("update_user_streak", { p_user_id: data.user_id, p_today: today })
+                        .then(({ error: rpcErr }) => {
+                            if (rpcErr) console.warn("[Streak] RPC failed (check if function exists):", rpcErr.message);
+                            else console.log("[Streak] Streak updated for user:", data.user_id);
+                        });
+                }
+
                 // Fallback: if realtime doesn't fire in 2s, apply manually.
-                // realtimeFired.current will be set to true by UPSERT_VERIFICATION handler if it fires first.
                 setTimeout(() => {
                     if (!realtimeFired.current) {
                         dispatch({ type: "UPDATE_VERIFICATION", id: verifId, status, reviewNote, reviewedBy: reviewerId });

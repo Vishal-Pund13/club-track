@@ -19,10 +19,12 @@ export default function LoginPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    if (!identifier.trim()) { setError("Please enter your email or mobile number."); return; }
+    if (!password.trim()) { setError("Please enter your password."); return; }
     setLoading(true);
     try {
       const result = await login(identifier, password);
-      if (!result.ok) return setError(result.error || "Login failed.");
+      if (!result.ok) { setError(result.error || "Login failed."); return; }
       router.push(mode === "admin" ? "/admin" : "/ops");
     } catch (err) {
       console.error(err);
@@ -134,17 +136,23 @@ export default function LoginPage() {
         <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
           <div>
             <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)", marginBottom: "0.5rem" }}>
-              {mode === "admin" ? "Admin Email" : "Email Address"}
+              {mode === "admin" ? "Admin Email" : "Mobile Number or Email"}
             </label>
             <input
               type={mode === "admin" ? "email" : "text"}
-              placeholder={mode === "admin" ? "admin@clubtrack.app" : "name@example.com"}
+              inputMode={mode === "member" ? "numeric" : undefined}
+              placeholder={mode === "admin" ? "admin@clubtrack.app" : "10-digit mobile or email"}
               value={identifier}
               onChange={(e) => setIdentifier(e.target.value)}
               required
               className="input-field"
               style={{ padding: "0.85rem 1rem", fontSize: "0.95rem" }}
             />
+            {mode === "member" && (
+              <p style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "0.35rem" }}>
+                Enter your 10-digit mobile number or the email you registered with.
+              </p>
+            )}
           </div>
           <div>
             <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)", marginBottom: "0.5rem" }}>Password</label>

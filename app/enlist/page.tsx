@@ -56,10 +56,12 @@ export default function EnlistPage() {
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    if (!form.name.trim()) return setError("Please enter your full name.");
     if (!form.email.includes("@")) return setError("Enter a valid email address.");
-    if (form.mobile && (form.mobile.length !== 10 || !/^\d+$/.test(form.mobile))) {
-      return setError("Mobile number must be exactly 10 digits.");
+    if (!form.mobile || form.mobile.length !== 10 || !/^\d+$/.test(form.mobile)) {
+      return setError("Mobile number is required — enter 10 digits.");
     }
+    if (!form.city.trim()) return setError("Please enter your city.");
     if (!form.aspirantType) return setError("Select your aspirant entry type.");
 
     setLoading(true);
@@ -227,11 +229,12 @@ export default function EnlistPage() {
             </div>
 
             <div>
-              <label style={labelStyle}>Mobile Number <span style={{ color: "rgba(78,95,59,0.45)", fontSize: "0.7rem" }}>(optional)</span></label>
-              <input type="tel" placeholder="10-digit mobile number" value={form.mobile}
-                onChange={e => set("mobile", e.target.value)} maxLength={10} style={inputStyle}
+              <label style={labelStyle}>Mobile Number <span style={{ color: "#f87171", fontSize: "0.7rem" }}>*</span></label>
+              <input type="tel" inputMode="numeric" placeholder="10-digit mobile number" value={form.mobile}
+                onChange={e => set("mobile", e.target.value.replace(/\D/g, "").slice(0, 10))} required maxLength={10} style={inputStyle}
                 onFocus={e => (e.target.style.borderColor = "rgba(78,95,59,0.7)")}
                 onBlur={e => (e.target.style.borderColor = "rgba(78,95,59,0.25)")} />
+              <span style={{ fontSize: "0.7rem", color: "rgba(130,150,100,0.6)", marginTop: "0.25rem", display: "block" }}>Used to log in later — 10 digits only</span>
             </div>
 
             <div>
