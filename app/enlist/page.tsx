@@ -88,6 +88,7 @@ export default function EnlistPage() {
     e.preventDefault();
     setError("");
     setLoading(true);
+
     try {
       const result = await verifyOtp(form.email, otp, {
         name: form.name,
@@ -95,12 +96,20 @@ export default function EnlistPage() {
         city: form.city,
         aspirantType: form.aspirantType as AspirantType,
       });
-      if (!result.ok) return setError(result.error || "Verification failed. Try again.");
+
+      if (!result.ok) {
+        setError(result.error || "Verification failed. Check the code and try again.");
+        setLoading(false);
+        return;
+      }
+
+      // Success branch
       setStep("password");
+      setLoading(false);
+      
     } catch (err) {
-      console.error(err);
-      setError("An error occurred. Please try again.");
-    } finally {
+      console.error("verifyOtp error:", err);
+      setError("An unexpected error occurred. Please try again.");
       setLoading(false);
     }
   };

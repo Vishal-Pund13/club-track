@@ -338,40 +338,57 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     setLoading(true);
     try {
+      // For general email login codes sent via signInWithOtp, the type is usually 'email' or 'magiclink' depending on SDK version.
+      // If 'email' type fails in some setups, it throws, which we catch.
       const { data, error } = await supabase.auth.verifyOtp({
         type: "email",
         email: cleanEmail,
         token: otp.trim(),
       });
 
-      if (error) return { ok: false, error: error.message };
+      if (error) {
+        console.error("verifyOtp error from Supabase:", error.message);
+        return { ok: false, error: error.message };
+      }
 
-      if (data.user) {
-        if (registrationData) {
-          const initials = makeInitials(registrationData.name);
-          // Store mobile in internal email format for password login later
-          const internalEmail = mobileToInternalEmail(registrationData.mobile);
+      if (!data || !data.user) {
+        console.warn("verifyOtp returned no user but no explicit error!");
+        return { ok: false, error: "Verification failed. The code may be invalid or expired." };
+      }
+
+      if (registrationData) {
+        const initials = makeInitials(registrationData.name);
+        const internalEmail = mobileToInternalEmail(registrationData.mobile);
+
+        try {
           const { error: upsertError } = await supabase.from("profiles").upsert({
             id: data.user.id,
             name: registrationData.name,
             initials,
-            // Only update mobile if they actually provided one, otherwise let the trigger's dummy string remain.
             ...(registrationData.mobile ? { mobile: registrationData.mobile } : {}),
             city: registrationData.city,
             aspirant_type: registrationData.aspirantType,
             role: "aspirant",
           });
-          if (upsertError) return { ok: false, error: upsertError.message };
-          // Best-effort: link internal mobile email alias for password login
-          if (registrationData.mobile) {
-            try { await supabase.auth.updateUser({ email: internalEmail }); } catch { /* ignore if fails */ }
+
+          if (upsertError) {
+            console.error("Profile upsertError:", upsertError.message);
+            return { ok: false, error: upsertError.message };
           }
+        } catch (dbErr: any) {
+          console.error("DB Error during profile upsert:", dbErr.message);
+          return { ok: false, error: "Failed to save profile details." };
         }
-        await loadProfileAndTodos(data.user.id);
+
+        if (registrationData.mobile) {
+          try { await supabase.auth.updateUser({ email: internalEmail }); } catch { /* ignore */ }
+        }
       }
 
+      await loadProfileAndTodos(data.user.id);
       return { ok: true };
     } catch (e: any) {
+      console.error("Unexpected verifyOtp exception:", e);
       return { ok: false, error: e?.message || "OTP verification failed." };
     } finally {
       setLoading(false);
