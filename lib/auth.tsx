@@ -402,9 +402,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     setLoading(true);
     try {
-      const { error } = await supabase.auth.updateUser({ password: cleanPass });
+      await new Promise(resolve => setTimeout(resolve, 500));
+      const timeout = new Promise<{error: {message: string}}>((_, reject) => 
+        setTimeout(() => reject(new Error("Request timed out. Please try again.")), 10000)
+      );
+      const { error } = await Promise.race([
+        supabase.auth.updateUser({ password: cleanPass }),
+        timeout
+      ]) as any;
+
       if (error) return { ok: false, error: error.message };
       return { ok: true };
+    } catch (e: any) {
+      return { ok: false, error: e?.message || "Failed to set password." };
     } finally {
       setLoading(false);
     }
