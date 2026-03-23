@@ -61,7 +61,7 @@ function MilitaryLoader({ phrases }: { phrases: string[] }) {
 
 export default function EnlistPage() {
   const router = useRouter();
-  const { sendOtp, verifyOtp, setPassword } = useAuth();
+  const { sendOtp, verifyOtp } = useAuth();
 
   const [form, setForm] = useState({
     name: "",
@@ -71,9 +71,7 @@ export default function EnlistPage() {
     aspirantType: "" as AspirantType | "",
   });
   const [otp, setOtp] = useState("");
-  const [password, setPasswordValue] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [step, setStep] = useState<"form" | "otp" | "password">("form");
+  const [step, setStep] = useState<"form" | "otp">("form");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
@@ -131,7 +129,7 @@ export default function EnlistPage() {
       }
 
       // Success branch
-      setStep("password");
+      router.push("/ops");
       setLoading(false);
       
     } catch (err) {
@@ -141,25 +139,9 @@ export default function EnlistPage() {
     }
   };
 
-  const handleSetPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    if (password.length < 8) return setError("Password must be at least 8 characters.");
-    if (password !== confirmPassword) return setError("Passwords do not match.");
-    setLoading(true);
-    try {
-      const r = await setPassword(password);
-      if (!r.ok) return setError(r.error || "Failed to set password.");
-      router.push("/ops");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const stepTitles = {
     form: { title: "Create account", sub: "Fill in your details to get started" },
     otp: { title: "Verify your email", sub: success || `Enter the code sent to ${form.email}` },
-    password: { title: "Set a password", sub: "You'll use this to sign in later" },
   };
 
   const current = stepTitles[step];
@@ -183,18 +165,18 @@ export default function EnlistPage() {
 
       {/* Steps indicator */}
       <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "1.75rem", zIndex: 2 }}>
-        {(["form", "otp", "password"] as const).map((s, i) => (
+        {(["form", "otp"] as const).map((s, i) => (
           <React.Fragment key={s}>
             <div style={{
               width: 28, height: 28, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
-              background: step === s ? "#4E5F3B" : ["form", "otp", "password"].indexOf(step) > i ? "rgba(78,95,59,0.4)" : "rgba(78,95,59,0.12)",
+              background: step === s ? "#4E5F3B" : ["form", "otp"].indexOf(step) > i ? "rgba(78,95,59,0.4)" : "rgba(78,95,59,0.12)",
               border: step === s ? "none" : "1px solid rgba(78,95,59,0.25)",
               fontSize: "0.72rem", fontWeight: 700, color: step === s ? "#fff" : "rgba(78,95,59,0.6)",
               transition: "all 0.3s",
             }}>
-              {["form", "otp", "password"].indexOf(step) > i ? "✓" : i + 1}
+              {["form", "otp"].indexOf(step) > i ? "✓" : i + 1}
             </div>
-            {i < 2 && <div style={{ width: 32, height: 1, background: ["form", "otp", "password"].indexOf(step) > i ? "rgba(78,95,59,0.5)" : "rgba(78,95,59,0.2)" }} />}
+            {i < 1 && <div style={{ width: 32, height: 1, background: ["form", "otp"].indexOf(step) > i ? "rgba(78,95,59,0.5)" : "rgba(78,95,59,0.2)" }} />}
           </React.Fragment>
         ))}
       </div>
@@ -339,31 +321,6 @@ export default function EnlistPage() {
             <button type="button" onClick={async () => { setError(""); setOtp(""); await handleSendOtp({ preventDefault: () => {} } as React.FormEvent); }}
               style={{ background: "none", border: "none", color: "rgba(78,95,59,0.6)", fontSize: "0.80rem", cursor: "pointer", fontFamily: "'Inter', sans-serif", textAlign: "center" }}>
               Didn't receive it? Resend code
-            </button>
-          </form>
-        )}
-
-        {/* STEP 3: Password */}
-        {step === "password" && (
-          <form onSubmit={handleSetPassword} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-            <div>
-              <label style={labelStyle}>Create Password</label>
-              <input type="password" placeholder="Min 8 characters" value={password}
-                onChange={e => setPasswordValue(e.target.value)} required style={inputStyle}
-                onFocus={e => (e.target.style.borderColor = "rgba(78,95,59,0.7)")}
-                onBlur={e => (e.target.style.borderColor = "rgba(78,95,59,0.25)")} />
-            </div>
-            <div>
-              <label style={labelStyle}>Confirm Password</label>
-              <input type="password" placeholder="Re-enter password" value={confirmPassword}
-                onChange={e => setConfirmPassword(e.target.value)} required style={inputStyle}
-                onFocus={e => (e.target.style.borderColor = "rgba(78,95,59,0.7)")}
-                onBlur={e => (e.target.style.borderColor = "rgba(78,95,59,0.25)")} />
-            </div>
-
-            <button type="submit" disabled={loading}
-              style={{ background: loading ? "rgba(78,95,59,0.5)" : "#4E5F3B", color: "#e8eddf", border: "none", borderRadius: 10, padding: "0.9rem", fontFamily: "'Inter', sans-serif", fontSize: "0.95rem", fontWeight: 700, cursor: loading ? "not-allowed" : "pointer", transition: "all 0.2s", marginTop: "0.25rem" }}>
-              {loading ? <MilitaryLoader phrases={militaryLoaderPhrases.password} /> : "Finish & Enter →"}
             </button>
           </form>
         )}
