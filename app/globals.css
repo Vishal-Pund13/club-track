@@ -40,20 +40,23 @@
 }
 
 .dark {
-  --bg: #191919;
-  --surface: #222222;
-  --surface-2: #2C2C2C;
-  --surface-hover: #343434;
-  --border: #383838;
-  --border-dark: #4A4A4A;
+  --bg: #171717;
+  --surface: #202020;
+  --surface-2: #2A2A2A;
+  --surface-hover: #333333;
+  --border: #3A3A3A;
+  --border-dark: #505050;
 
-  --text: #E8E8E6;
-  --text-sub: #ABABAB;
-  --text-muted: #717171;
+  /* High-contrast text for dark mode */
+  --text: #F0F0EE;
+  --text-sub: #C8C8C6;
+  --text-muted: #8A8A88;
 
-  /* accent is kept olive in dark mode too, but readable */
-  --accent-light: rgba(78,95,59,0.18);
-  --accent-dim: rgba(78,95,59,0.35);
+  /* Accent with more luminosity in dark mode */
+  --accent: #6B8C52;
+  --accent-hover: #7BA05E;
+  --accent-light: rgba(107,140,82,0.15);
+  --accent-dim: rgba(107,140,82,0.35);
 }
 
 /* ─── Base Reset ─────────────────────────────────────────────────────────────── */
@@ -462,6 +465,9 @@ h3 { font-size: 1rem; font-weight: 600; }
 
 .tab:hover:not(.active) { color: var(--text); background: var(--surface-hover); }
 .tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+.dark .tab { color: var(--text-muted); }
+.dark .tab:hover:not(.active) { color: var(--text-sub); }
+.dark .tab.active { color: var(--accent); }
 
 /* ─── Input ─────────────────────────────────────────────────────────────────── */
 .input-field {
@@ -475,6 +481,13 @@ h3 { font-size: 1rem; font-weight: 600; }
   color: var(--text);
   outline: none;
   transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+/* Slightly lighter surface for inputs in dark mode so text pops */
+.dark .input-field {
+  background: var(--surface-2);
+  border-color: var(--border-dark);
+  color: var(--text);
 }
 
 .input-field:focus {

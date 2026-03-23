@@ -7,7 +7,7 @@ import { useAuth } from "@/lib/auth";
 import { useApp } from "@/lib/store";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 import { motion, AnimatePresence } from "framer-motion";
-import { User, Lock, CheckCircle2, AlertCircle, Eye, EyeOff, Shield, Flame } from "lucide-react";
+import { User, CheckCircle2, AlertCircle, Flame } from "lucide-react";
 
 // ─── Reusable field wrapper ────────────────────────────────────────────────────
 
@@ -81,21 +81,11 @@ export default function ProfilePage() {
   // Editable fields
   const [name, setName] = useState("");
 
-  // Password fields
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [showNewPass, setShowNewPass] = useState(false);
-  const [showConfirmPass, setShowConfirmPass] = useState(false);
-
-  // Loading states (separate per form)
   const [profileLoading, setProfileLoading] = useState(false);
-  const [passwordLoading, setPasswordLoading] = useState(false);
 
-  // Feedback — shared display, but error/success are distinct
+  // Feedback
   const [profileError, setProfileError] = useState("");
   const [profileSuccess, setProfileSuccess] = useState("");
-  const [passwordError, setPasswordError] = useState("");
-  const [passwordSuccess, setPasswordSuccess] = useState("");
 
   // Derived stats
   const totalPts = user
@@ -131,31 +121,7 @@ export default function ProfilePage() {
     }
   }
 
-  // ── Change password ────────────────────────────────────────────────────────
-  async function changePassword(e: React.FormEvent) {
-    e.preventDefault();
-    setPasswordError(""); setPasswordSuccess("");
 
-    if (newPassword.length < 8) {
-      setPasswordError("Password must be at least 8 characters.");
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      setPasswordError("Passwords don't match.");
-      return;
-    }
-
-    setPasswordLoading(true);
-    try {
-      const r = await setPassword(newPassword);
-      if (!r.ok) { setPasswordError(r.error || "Failed to change password."); return; }
-      setNewPassword("");
-      setConfirmPassword("");
-      setPasswordSuccess("Password updated successfully. Use it next time you sign in.");
-    } finally {
-      setPasswordLoading(false);
-    }
-  }
 
   if (!user) {
     return (
@@ -283,100 +249,7 @@ export default function ProfilePage() {
               </form>
             </div>
 
-            {/* ── Change password ── */}
-            <div className="card">
-              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
-                <Lock size={15} style={{ color: "var(--accent)" }} />
-                <h2 style={{ margin: 0 }}>Change Password</h2>
-              </div>
-              <p style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginBottom: "1.1rem" }}>
-                Update the password you use to sign in with your mobile number.
-              </p>
 
-              <Feedback error={passwordError} success={passwordSuccess} />
-
-              <form onSubmit={changePassword} style={{ display: "flex", flexDirection: "column", gap: "0.85rem" }}>
-                <Field label="New Password" hint="Minimum 8 characters.">
-                  <div style={{ position: "relative" }}>
-                    <input
-                      className="input-field"
-                      type={showNewPass ? "text" : "password"}
-                      placeholder="New password"
-                      value={newPassword}
-                      onChange={e => { setNewPassword(e.target.value); setPasswordError(""); setPasswordSuccess(""); }}
-                      style={{ paddingRight: "2.5rem" }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowNewPass(p => !p)}
-                      style={{ position: "absolute", right: "0.75rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", display: "flex", alignItems: "center" }}
-                    >
-                      {showNewPass ? <EyeOff size={15} /> : <Eye size={15} />}
-                    </button>
-                  </div>
-                </Field>
-
-                <Field label="Confirm Password">
-                  <div style={{ position: "relative" }}>
-                    <input
-                      className="input-field"
-                      type={showConfirmPass ? "text" : "password"}
-                      placeholder="Re-enter new password"
-                      value={confirmPassword}
-                      onChange={e => { setConfirmPassword(e.target.value); setPasswordError(""); setPasswordSuccess(""); }}
-                      style={{ paddingRight: "2.5rem" }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirmPass(p => !p)}
-                      style={{ position: "absolute", right: "0.75rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", display: "flex", alignItems: "center" }}
-                    >
-                      {showConfirmPass ? <EyeOff size={15} /> : <Eye size={15} />}
-                    </button>
-                  </div>
-                </Field>
-
-                {/* Password strength indicator */}
-                {newPassword.length > 0 && (
-                  <div>
-                    <div style={{ display: "flex", gap: "0.3rem", marginBottom: "0.3rem" }}>
-                      {[1, 2, 3, 4].map(i => {
-                        const strength = Math.min(4, Math.floor(newPassword.length / 3));
-                        return (
-                          <div key={i} style={{
-                            flex: 1, height: 3, borderRadius: 9999,
-                            background: i <= strength
-                              ? (strength <= 1 ? "#f87171" : strength <= 2 ? "#fbbf24" : strength <= 3 ? "#a3e635" : "#10b981")
-                              : "var(--border-dark)",
-                            transition: "background 0.2s",
-                          }} />
-                        );
-                      })}
-                    </div>
-                    <span style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>
-                      {newPassword.length < 8 ? "Too short" : newPassword.length < 10 ? "Weak" : newPassword.length < 13 ? "Good" : "Strong"}
-                    </span>
-                  </div>
-                )}
-
-                {/* Match indicator */}
-                {confirmPassword.length > 0 && (
-                  <div style={{ fontSize: "0.72rem", color: newPassword === confirmPassword ? "#10b981" : "#f87171", display: "flex", alignItems: "center", gap: "0.3rem" }}>
-                    {newPassword === confirmPassword ? <CheckCircle2 size={12} /> : <AlertCircle size={12} />}
-                    {newPassword === confirmPassword ? "Passwords match" : "Passwords don't match"}
-                  </div>
-                )}
-
-                <button
-                  className="btn-amber"
-                  disabled={passwordLoading || newPassword.length < 8 || newPassword !== confirmPassword}
-                  type="submit"
-                  style={{ alignSelf: "flex-start" }}
-                >
-                  {passwordLoading ? "Updating…" : "Update Password"}
-                </button>
-              </form>
-            </div>
 
           </div>
         </main>

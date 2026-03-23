@@ -66,6 +66,7 @@ interface AuthContextValue extends AuthState {
       city?: string;
       aspirantType?: AspirantType;
       role?: "aspirant" | "admin";
+      shouldCreateUser?: boolean;
     }
   ) => Promise<{ ok: boolean; error?: string }>;
   verifyOtp: (
@@ -307,15 +308,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { error } = await supabase.auth.signInWithOtp({
       email: cleanEmail,
       options: {
-        shouldCreateUser: true,
+        shouldCreateUser: options?.shouldCreateUser ?? true,
         data: {
           ...(options?.name ? { name: options.name } : {}),
           ...(initials ? { initials } : {}),
-          // If no mobile is provided, pass a unique dummy string so the Postgres Trigger's `mobile` UNIQUE constraint doesn't crash on 'unknown'
-          mobile: options?.mobile || `unverified-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+          // If no mobile is provided on creation, pass dummy
+          ...(options?.shouldCreateUser !== false
+              ? { mobile: options?.mobile || `unverified-${Date.now()}-${Math.floor(Math.random() * 1000)}` }
+              : {}),
           ...(options?.city ? { city: options.city } : {}),
           ...(options?.aspirantType ? { aspirant_type: options.aspirantType } : {}),
-          role: options?.role ?? "aspirant",
+          ...(options?.shouldCreateUser !== false ? { role: options?.role ?? "aspirant" } : {}),
         },
       },
     });
