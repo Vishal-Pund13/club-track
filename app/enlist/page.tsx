@@ -108,7 +108,7 @@ export default function EnlistPage() {
   const handleSetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    if (password.length < 6) return setError("Password must be at least 6 characters.");
+    if (password.length < 8) return setError("Password must be at least 8 characters.");
     if (password !== confirmPassword) return setError("Passwords do not match.");
     setLoading(true);
     try {
@@ -312,7 +312,7 @@ export default function EnlistPage() {
           <form onSubmit={handleSetPassword} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
             <div>
               <label style={labelStyle}>Create Password</label>
-              <input type="password" placeholder="Min 6 characters" value={password}
+              <input type="password" placeholder="Min 8 characters" value={password}
                 onChange={e => setPasswordValue(e.target.value)} required style={inputStyle}
                 onFocus={e => (e.target.style.borderColor = "rgba(78,95,59,0.7)")}
                 onBlur={e => (e.target.style.borderColor = "rgba(78,95,59,0.25)")} />

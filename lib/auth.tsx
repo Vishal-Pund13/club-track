@@ -261,7 +261,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { ok: false, error: "Supabase is not configured. Password login is unavailable." };
     }
 
-    if (cleanPass.length < 6) return { ok: false, error: "Password must be at least 6 characters." };
+    if (cleanPass.length < 8) return { ok: false, error: "Password must be at least 8 characters." };
 
     setLoading(true);
     try {
@@ -378,7 +378,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // After OTP registration, aspirant sets a password for future logins
   const setPassword: AuthContextValue["setPassword"] = async (password) => {
     const cleanPass = password.trim();
-    if (cleanPass.length < 6) return { ok: false, error: "Password must be at least 6 characters." };
+    if (cleanPass.length < 8) return { ok: false, error: "Password must be at least 8 characters." };
 
     if (!isSupabaseConfigured || !supabase) {
       return { ok: false, error: "Supabase is not configured. Password setup is unavailable." };
