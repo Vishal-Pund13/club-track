@@ -32,6 +32,33 @@ const labelStyle: React.CSSProperties = {
   display: "block",
 };
 
+const militaryLoaderPhrases = {
+  password: ["Encrypting credentials...", "Securing your post...", "Establishing identity...", "Almost there, soldier..."],
+  otpSend: ["Transmitting signal...", "Encoding message...", "Dispatching orders..."],
+  otpVerify: ["Authenticating...", "Verifying clearance...", "Cross-checking records..."],
+};
+
+function MilitaryLoader({ phrases }: { phrases: string[] }) {
+  const [index, setIndex] = useState(0);
+
+  React.useEffect(() => {
+    const timer = setInterval(() => {
+      setIndex((i) => (i + 1) % phrases.length);
+    }, 800);
+    return () => clearInterval(timer);
+  }, [phrases]);
+
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem" }}>
+      <style>
+        {`@keyframes pulseBlink { 0% { opacity: 0.1; } 100% { opacity: 1; } }`}
+      </style>
+      <span style={{ color: "#10b981", animation: "pulseBlink 0.6s infinite alternate", fontSize: "0.85em" }}>●</span>
+      {phrases[index]}
+    </span>
+  );
+}
+
 export default function EnlistPage() {
   const router = useRouter();
   const { sendOtp, verifyOtp, setPassword } = useAuth();
@@ -271,7 +298,7 @@ export default function EnlistPage() {
               onMouseEnter={e => { if (!loading) e.currentTarget.style.background = "#5d7047"; }}
               onMouseLeave={e => { if (!loading) e.currentTarget.style.background = "#4E5F3B"; }}
             >
-              {loading ? "Sending code…" : "Send Verification Code →"}
+              {loading ? <MilitaryLoader phrases={militaryLoaderPhrases.otpSend} /> : "Send Verification Code →"}
             </button>
 
             <p style={{ textAlign: "center", fontSize: "0.82rem", color: "rgba(160,180,130,0.45)", margin: 0 }}>
@@ -306,7 +333,7 @@ export default function EnlistPage() {
 
             <button type="submit" disabled={loading || otp.length < 8}
               style={{ background: loading || otp.length < 8 ? "rgba(78,95,59,0.4)" : "#4E5F3B", color: "#e8eddf", border: "none", borderRadius: 10, padding: "0.9rem", fontFamily: "'Inter', sans-serif", fontSize: "0.95rem", fontWeight: 700, cursor: loading || otp.length < 8 ? "not-allowed" : "pointer", transition: "all 0.2s" }}>
-              {loading ? "Verifying…" : "Verify & Continue →"}
+              {loading ? <MilitaryLoader phrases={militaryLoaderPhrases.otpVerify} /> : "Verify & Continue →"}
             </button>
 
             <button type="button" onClick={async () => { setError(""); setOtp(""); await handleSendOtp({ preventDefault: () => {} } as React.FormEvent); }}
@@ -336,7 +363,7 @@ export default function EnlistPage() {
 
             <button type="submit" disabled={loading}
               style={{ background: loading ? "rgba(78,95,59,0.5)" : "#4E5F3B", color: "#e8eddf", border: "none", borderRadius: 10, padding: "0.9rem", fontFamily: "'Inter', sans-serif", fontSize: "0.95rem", fontWeight: 700, cursor: loading ? "not-allowed" : "pointer", transition: "all 0.2s", marginTop: "0.25rem" }}>
-              {loading ? "Setting up…" : "Finish & Enter →"}
+              {loading ? <MilitaryLoader phrases={militaryLoaderPhrases.password} /> : "Finish & Enter →"}
             </button>
           </form>
         )}
