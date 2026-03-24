@@ -4,6 +4,7 @@ import { useApp, usePendingVerifications, Verification, VerifStatus } from "@/li
 import { useAuth } from "@/lib/auth";
 import { CLUBS, TODAY } from "@/lib/data";
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import Sidebar from "@/components/Sidebar";
 import MobileTabBar from "@/components/MobileTabBar";
@@ -148,6 +149,7 @@ function VerifCard({ verif, onReview }: {
 export default function AdminPage() {
     const { state, addTaskRealtime, toggleTaskActiveRealtime, reviewVerification } = useApp();
     const { user, captainClubs: authCaptainClubs } = useAuth();
+    const router = useRouter();
     const [activeTab, setActiveTab] = useState<AdminTab>("overview");
     const [rosterPage, setRosterPage] = useState(0);
     const [form, setForm] = useState<NewMissionForm>(DEFAULT_FORM);
@@ -164,6 +166,13 @@ export default function AdminPage() {
         window.addEventListener('resize', check);
         return () => window.removeEventListener('resize', check);
     }, []);
+
+    // Strict Route Guard: Kick unauthorized users out of the admin panel completely
+    useEffect(() => {
+        if (user && user.role !== "admin" && (!authCaptainClubs || authCaptainClubs.length === 0)) {
+            router.push("/ops");
+        }
+    }, [user?.role, authCaptainClubs?.length, router]);
 
     useEffect(() => {
         try {
