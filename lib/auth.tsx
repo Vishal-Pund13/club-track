@@ -58,6 +58,7 @@ interface AuthState {
 }
 
 interface AuthContextValue extends AuthState {
+  loginWithPassword: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
   sendOtp: (
     email: string,
     options?: {
@@ -252,6 +253,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  // ── Password Auth (For Mock Admins) ────────────────────────────────────────────────
+
+  const loginWithPassword: AuthContextValue["loginWithPassword"] = async (email, password) => {
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanPass = password.trim();
+
+    if (!isSupabaseConfigured || !supabase) {
+      return { ok: false, error: "Supabase is not configured. Password login is unavailable." };
+    }
+
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({ email: cleanEmail, password: cleanPass });
+      if (error) return { ok: false, error: error.message };
+      if (data.user) await loadProfileAndTodos(data.user.id);
+      return { ok: true };
+    } catch (err: any) {
+      console.error(err);
+      return { ok: false, error: err?.message || "Login failed." };
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // ── OTP Auth (Supabase) ────────────────────────────────────────────────
 
   const sendOtp: AuthContextValue["sendOtp"] = async (email, options) => {
@@ -439,7 +464,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         user, isGuest, isAdmin: user?.role === "admin",
         personalTodos, loading, captainClubs, otpSession,
-        sendOtp, verifyOtp, setPassword, logout, enterAsGuest,
+        loginWithPassword, sendOtp, verifyOtp, setPassword, logout, enterAsGuest,
         addPersonalTodo, togglePersonalTodo, deletePersonalTodo,
       }}
     >

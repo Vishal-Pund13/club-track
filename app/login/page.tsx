@@ -34,10 +34,12 @@ function MilitaryLoader({ phrases }: { phrases: string[] }) {
 
 export default function LoginPage() {
   const router = useRouter();
-  const { enterAsGuest, sendOtp, verifyOtp } = useAuth();
+  const { enterAsGuest, sendOtp, verifyOtp, loginWithPassword } = useAuth();
 
+  const [mode, setMode] = useState<"member" | "admin">("member");
   const [step, setStep] = useState<"email" | "otp">("email");
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [otp, setOtp] = useState("");
   
   const [error, setError] = useState("");
@@ -82,6 +84,24 @@ export default function LoginPage() {
       router.push("/ops");
     } catch (err) {
       setError("An unexpected error occurred.");
+      setLoading(false);
+    }
+  };
+
+  const handleAdminLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    clearMessages();
+    if (!email.includes("@")) { setError("Enter a valid admin email."); return; }
+    if (!password) { setError("Enter your admin password."); return; }
+
+    setLoading(true);
+    try {
+      const result = await loginWithPassword(email, password);
+      if (!result.ok) { setError(result.error || "Login failed."); return; }
+      router.push("/admin");
+    } catch (err) {
+      setError("An unexpected error occurred.");
+    } finally {
       setLoading(false);
     }
   };
@@ -134,6 +154,27 @@ export default function LoginPage() {
           </button>
         )}
 
+        {step === "email" && (
+          <div style={{ display: "flex", background: "var(--surface-2)", border: "1px solid var(--border-dark)", borderRadius: 10, padding: 4, marginBottom: "1.5rem" }}>
+            {(["member", "admin"] as const).map((m) => (
+              <button
+                key={m}
+                onClick={() => { setMode(m); clearMessages(); }}
+                style={{
+                  flex: 1, padding: "0.55rem", border: "none", borderRadius: 8,
+                  fontSize: "0.85rem", fontWeight: 600,
+                  background: mode === m ? "var(--accent)" : "transparent",
+                  color: mode === m ? "#fff" : "var(--text-muted)",
+                  cursor: "pointer", transition: "all 0.2s", textTransform: "capitalize",
+                  boxShadow: mode === m ? "var(--shadow-sm)" : "none",
+                }}
+              >
+                {m === "member" ? "Aspirant" : "Admin"}
+              </button>
+            ))}
+          </div>
+        )}
+
         <div style={{ marginBottom: "2rem" }}>
           {step === "email" && (
             <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", marginBottom: "0.75rem" }}>
@@ -144,10 +185,10 @@ export default function LoginPage() {
             </div>
           )}
           <h1 style={{ fontSize: "1.65rem", fontWeight: 700, color: "var(--text)", margin: 0, letterSpacing: "-0.03em" }}>
-            {step === "email" ? "Report for Duty" : "Authenticate"}
+            {step === "email" && mode === "admin" ? "HQ Login" : step === "email" ? "Report for Duty" : "Authenticate"}
           </h1>
           <p style={{ fontSize: "0.9rem", color: "var(--text-muted)", marginTop: "0.4rem" }}>
-            {step === "email" ? "Sign in using your registered email address" : `Check your comms. Code sent to ${email}`}
+            {step === "email" && mode === "admin" ? "Secure admin bypass access via password." : step === "email" ? "Sign in using your registered email address" : `Check your comms. Code sent to ${email}`}
           </p>
         </div>
 
@@ -169,7 +210,7 @@ export default function LoginPage() {
           )}
         </AnimatePresence>
 
-        {step === "email" && (
+        {step === "email" && mode === "member" && (
           <>
             <form onSubmit={handleSendOtp} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
               <div>
@@ -221,6 +262,52 @@ export default function LoginPage() {
               Enter as Guest Observer
             </button>
           </>
+        )}
+
+        {step === "email" && mode === "admin" && (
+          <form onSubmit={handleAdminLogin} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+            <div>
+              <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)", marginBottom: "0.5rem" }}>
+                Admin Email
+              </label>
+              <input
+                type="email"
+                placeholder="admin@clubtrack.app"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="input-field"
+                style={{ padding: "0.85rem 1rem", fontSize: "0.95rem" }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)", marginBottom: "0.5rem" }}>
+                Password
+              </label>
+              <input
+                type="password"
+                placeholder="Enter password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="input-field"
+                style={{ padding: "0.85rem 1rem", fontSize: "0.95rem", fontFamily: "small-caption" }}
+              />
+            </div>
+            
+            <button
+              type="submit"
+              disabled={loading}
+              className="btn-amber"
+              style={{
+                padding: "1.1rem", fontSize: "1rem", marginTop: "0.5rem",
+                opacity: loading ? 0.7 : 1, cursor: loading ? "not-allowed" : "pointer",
+              }}
+            >
+              {loading ? "Authenticating…" : "Sign In to HQ"}
+            </button>
+          </form>
         )}
 
         {step === "otp" && (
